@@ -14,7 +14,12 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { useStore } from './store';
 
 function App() {
-  const { isAuthenticated } = useStore();
+  const { isAuthenticated, loadProducts, loadOrders, loadSettings, initUser } = useStore();
+
+  // Benutzer initialisieren, wenn ein Token vorhanden ist
+  useEffect(() => {
+    initUser();
+  }, [initUser]);
 
   useEffect(() => {
     // Function to update the viewport height
@@ -35,6 +40,15 @@ function App() {
       window.removeEventListener('orientationchange', updateHeight);
     };
   }, []);
+
+  // Lade Produkte, Bestellungen und Einstellungen, wenn der Benutzer authentifiziert ist
+  useEffect(() => {
+    if (isAuthenticated()) {
+      loadProducts();
+      loadOrders();
+      loadSettings();
+    }
+  }, [isAuthenticated, loadProducts, loadOrders, loadSettings]);
 
   if (!isAuthenticated()) {
     return <LoginForm />;

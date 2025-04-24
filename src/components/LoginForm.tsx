@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useStore } from '../store';
 import { UtensilsCrossed } from 'lucide-react';
+import { useLogin } from '../api/auth';
+import { useStore } from '../store';
 
 export const LoginForm: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const login = useStore(state => state.login);
+  const { login: apiLogin, loading } = useLogin();
+  const storeLogin = useStore(state => state.login);
 
   // Focus username input on mount
   useEffect(() => {
@@ -20,9 +22,19 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setError('');
     
-    const success = await login(username, password);
-    if (!success) {
-      setError('Invalid username or password');
+    try {
+      // GraphQL API für Login verwenden
+      const result = await apiLogin(username, password);
+      
+      if (result.success && result.user) {
+        // Benutzer im Store setzen (über die vorhandene login-Funktion)
+        await storeLogin(username, password);
+      } else {
+        setError('Ungültiger Benutzername oder Passwort');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
     }
   };
 

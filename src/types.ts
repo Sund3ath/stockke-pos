@@ -76,19 +76,20 @@ export interface Customer {
 
 export interface Order {
   id: string;
-  items: Array<{ 
-    product: Product; 
+  items: Array<{
+    product: Product;
     quantity: number;
     note?: string;
   }>;
   total: number;
-  status: 'pending' | 'completed' | 'cancelled';
+  status: 'pending' | 'completed' | 'cancelled' | 'parked';
   timestamp: string;
   paymentMethod: 'cash' | 'card';
   cashReceived?: number;
   tseSignature?: string;
   tableId?: string;
   note?: string;
+  isTakeaway?: boolean;
 }
 
 export interface Table {

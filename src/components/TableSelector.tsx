@@ -11,7 +11,13 @@ export const TableSelector: React.FC = () => {
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
       {/* Pickup Option */}
       <button
-        onClick={() => selectTable('pickup')}
+        onClick={async () => {
+          try {
+            await selectTable('pickup');
+          } catch (error) {
+            console.error('Fehler beim Auswählen des Abholmodus:', error);
+          }
+        }}
         className={`h-16 flex flex-col items-center justify-center rounded-lg text-center transition-all
           ${selectedTable?.id === 'pickup'
             ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-500'
@@ -26,7 +32,13 @@ export const TableSelector: React.FC = () => {
       {tables.map((table) => (
         <button
           key={table.id}
-          onClick={() => selectTable(table.id)}
+          onClick={async () => {
+            try {
+              await selectTable(table.id);
+            } catch (error) {
+              console.error(`Fehler beim Auswählen des Tisches ${table.id}:`, error);
+            }
+          }}
           className={`h-16 flex flex-col items-center justify-center rounded-lg text-center transition-all
             ${table.occupied
               ? 'bg-red-100 text-red-800'

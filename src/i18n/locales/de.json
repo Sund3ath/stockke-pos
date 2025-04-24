@@ -92,6 +92,7 @@
     "cashPayment": "Barzahlung",
     "cardPayment": "Kartenzahlung",
     "completeOrder": "Bestellung abschließen",
+    "errorCompletingOrder": "Fehler beim Abschließen der Bestellung. Bitte versuchen Sie es erneut.",
     "takeaway": "Zum Mitnehmen",
     "delivery": "Lieferung"
   },

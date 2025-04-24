@@ -38,7 +38,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, total, it
     return acc;
   }, {} as Record<string, { net: number; tax: number }>);
 
-  const handleCashPayment = () => {
+  const handleCashPayment = async () => {
     if (!cashReceived) {
       alert(t('pos.enterCashAmount'));
       return;
@@ -50,15 +50,25 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, total, it
       return;
     }
 
-    completeOrder('cash', cashAmount);
-    generateReceipt(items, total, 'cash', cashAmount, isIndoor);
-    onClose();
+    try {
+      await completeOrder('cash', cashAmount);
+      generateReceipt(items, total, 'cash', cashAmount, isIndoor);
+      onClose();
+    } catch (error) {
+      console.error('Fehler beim Abschließen der Bestellung:', error);
+      alert(t('pos.errorCompletingOrder'));
+    }
   };
 
-  const handleCardPayment = () => {
-    completeOrder('card');
-    generateReceipt(items, total, 'card', undefined, isIndoor);
-    onClose();
+  const handleCardPayment = async () => {
+    try {
+      await completeOrder('card');
+      generateReceipt(items, total, 'card', undefined, isIndoor);
+      onClose();
+    } catch (error) {
+      console.error('Fehler beim Abschließen der Bestellung:', error);
+      alert(t('pos.errorCompletingOrder'));
+    }
   };
 
   const handleMoneyShortcut = (amount: number) => {

@@ -3,9 +3,10 @@ import { useStore } from '../store';
 import { Settings } from '../types';
 import { Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { UserManagement } from '../components/UserManagement';
 
 export const SettingsPage: React.FC = () => {
-  const { settings, updateSettings } = useStore();
+  const { settings, updateSettings, isAdmin } = useStore();
   const [formData, setFormData] = useState<Settings>(settings);
   const [saved, setSaved] = useState(false);
   const { t, i18n } = useTranslation();
@@ -19,11 +20,17 @@ export const SettingsPage: React.FC = () => {
     i18n.changeLanguage(newLanguage);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
+    const success = await updateSettings(formData);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+    
+    if (success) {
+      console.log('Einstellungen erfolgreich in der Datenbank gespeichert');
+    } else {
+      console.warn('Einstellungen konnten nicht in der Datenbank gespeichert werden, nur lokaler Zustand wurde aktualisiert');
+    }
   };
 
   return (
@@ -368,6 +375,15 @@ export const SettingsPage: React.FC = () => {
           </div>
         </form>
       </div>
+      
+      {/* User Management - nur für Administratoren (außerhalb des Formulars) */}
+      {isAdmin() && (
+        <div className="bg-white rounded-lg shadow-sm max-w-5xl mx-auto mt-8">
+          <div className="p-6">
+            <UserManagement />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

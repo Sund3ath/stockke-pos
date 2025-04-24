@@ -42,6 +42,7 @@
     "cash": "Nakit Ödeme",
     "card": "Kart ile Ödeme",
     "completePayment": "Siparişi Tamamla",
+    "errorCompletingOrder": "Sipariş tamamlanırken hata oluştu. Lütfen tekrar deneyin.",
     "cart": "Mevcut Sipariş",
     "products": "Ürünler",
     "categories": "Kategoriler",

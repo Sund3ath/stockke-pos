@@ -42,6 +42,7 @@
     "cash": "Cash Payment",
     "card": "Card Payment",
     "completePayment": "Complete Order",
+    "errorCompletingOrder": "Error completing order. Please try again.",
     "cart": "Current Order",
     "products": "Products",
     "categories": "Categories",
