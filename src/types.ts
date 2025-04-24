@@ -21,12 +21,12 @@ export interface TaxSettings {
 }
 
 export interface Settings {
+  language: string;
   currency: {
     code: string;
     symbol: string;
     position: 'before' | 'after';
   };
-  language: string;
   timezone: string;
   tse: {
     apiKey: string;
@@ -45,7 +45,14 @@ export interface Settings {
     footer: string;
     showLogo: boolean;
   };
-  tax: TaxSettings;
+  tax: {
+    enabled: boolean;
+    rate: number;
+  };
+  printer: {
+    enabled: boolean;
+    name: string;
+  };
   modules: {
     tse: boolean;
     customers: boolean;

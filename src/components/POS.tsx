@@ -17,6 +17,7 @@ import { TableSelector } from './TableSelector';
 import { CheckoutModal } from './CheckoutModal';
 import { ReceiptsModal } from './ReceiptsModal';
 import { ProductGrid } from './ProductGrid';
+import { formatPrice } from '../utils/currency';
 
 export const POS: React.FC = () => {
   const { t } = useTranslation();
@@ -86,7 +87,7 @@ export const POS: React.FC = () => {
                   <p className="font-medium text-sm md:text-base">{item.product.name}</p>
                   <div className="flex items-center text-xs md:text-sm text-gray-600">
                     <span>× {item.quantity}</span>
-                    <span className="mx-2">€{(item.product.price * item.quantity).toFixed(2)}</span>
+                    <span className="mx-2">{formatPrice(item.product.price * item.quantity)}</span>
                   </div>
                 </div>
                 
@@ -122,7 +123,7 @@ export const POS: React.FC = () => {
         <div className="border-t p-4 bg-white">
           <div className="flex justify-between mb-2 font-medium">
             <span>{t('common.total')}</span>
-            <span>€{total.toFixed(2)}</span>
+            <span>{formatPrice(total)}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <button className="bg-gray-700 text-white p-2 rounded flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors text-xs md:text-sm">
@@ -174,7 +175,7 @@ export const POS: React.FC = () => {
       </div>
 
       {/* Products Section */}
-      <div className={`${selectedTable ? 'flex md:w-1/4' : 'hidden md:flex md:w-1/4'} flex-col bg-white border-l h-[60vh] md:h-full`}>
+      <div className={`${selectedTable ? 'flex md:w-1/4' : 'hidden md:flex md:w-1/4'} flex-col bg-white border-l h-[calc(100vh-88px)] md:h-full overflow-hidden`}>
         <div className="p-4 flex-shrink-0 bg-white sticky top-0 z-10 border-b">
           <div className="md:hidden flex items-center justify-between mb-4">
             <button
@@ -196,10 +197,8 @@ export const POS: React.FC = () => {
             <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-y-auto">
-            <ProductGrid />
-          </div>
+        <div className="flex-1 overflow-y-auto">
+          <ProductGrid />
         </div>
       </div>
 

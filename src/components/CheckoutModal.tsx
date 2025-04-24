@@ -5,6 +5,7 @@ import { CreditCard, Banknote, X } from 'lucide-react';
 import { generateReceipt } from '../utils/receipt';
 import { calculateTax } from '../utils/tax';
 import { MoneyShortcuts } from './MoneyShortcuts';
+import { formatPrice } from '../utils/currency';
 
 interface CheckoutModalProps {
   onClose: () => void;
@@ -102,7 +103,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, total, it
               {items.map((item, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span>{item.quantity}x {item.product.name}</span>
-                  <span>€{(item.product.price * item.quantity).toFixed(2)}</span>
+                  <span>{formatPrice(item.product.price * item.quantity)}</span>
                 </div>
               ))}
             </div>
@@ -112,13 +113,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, total, it
                 <div key={rate} className="flex justify-between text-sm text-gray-600">
                   <span>{rate}% {t('orders.vat')}</span>
                   <span>
-                    {t('orders.net')}: €{net.toFixed(2)} | {t('orders.vat')}: €{tax.toFixed(2)}
+                    {t('orders.net')}: {formatPrice(net)} | {t('orders.vat')}: {formatPrice(tax)}
                   </span>
                 </div>
               ))}
               <div className="flex justify-between font-bold text-lg pt-2">
                 <span>{t('common.total')}:</span>
-                <span>€{total.toFixed(2)}</span>
+                <span>{formatPrice(total)}</span>
               </div>
             </div>
           </div>
@@ -163,7 +164,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ onClose, total, it
               
               {parseFloat(cashReceived) > 0 && (
                 <div className="text-lg font-semibold">
-                  {t('pos.change')}: €{(parseFloat(cashReceived) - total).toFixed(2)}
+                  {t('pos.change')}: {formatPrice(parseFloat(cashReceived) - total)}
                 </div>
               )}
               

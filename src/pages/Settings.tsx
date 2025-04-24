@@ -27,8 +27,8 @@ export const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-sm">
+    <div className="h-full overflow-auto p-6">
+      <div className="bg-white rounded-lg shadow-sm max-w-5xl mx-auto">
         <form onSubmit={handleSubmit} className="p-6 space-y-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
@@ -120,6 +120,29 @@ export const SettingsPage: React.FC = () => {
                     <option value="tr">Türkçe</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">{t('settings.currency')}</label>
+                  <select
+                    value={`${formData.currency.code}`}
+                    onChange={(e) => {
+                      const currencyMap = {
+                        EUR: { code: 'EUR', symbol: '€', position: 'before' as const },
+                        USD: { code: 'USD', symbol: '$', position: 'before' as const },
+                        TRY: { code: 'TRY', symbol: '₺', position: 'after' as const }
+                      };
+                      setFormData({
+                        ...formData,
+                        currency: currencyMap[e.target.value as keyof typeof currencyMap]
+                      });
+                    }}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="EUR">Euro (€)</option>
+                    <option value="USD">US Dollar ($)</option>
+                    <option value="TRY">Turkish Lira (₺)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -128,75 +151,41 @@ export const SettingsPage: React.FC = () => {
               <h3 className="text-lg font-semibold">Tax Settings</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-medium mb-2">Indoor</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Food Tax Rate (%)</label>
+                  <label className="block text-sm font-medium text-gray-700">Enable Tax</label>
+                  <div className="mt-1">
+                    <label className="relative inline-flex items-center cursor-pointer">
                       <input
-                        type="number"
-                        value={formData.tax.indoor.food}
+                        type="checkbox"
+                        checked={formData.tax.enabled}
                         onChange={(e) => setFormData({
                           ...formData,
                           tax: {
                             ...formData.tax,
-                            indoor: { ...formData.tax.indoor, food: Number(e.target.value) }
+                            enabled: e.target.checked
                           }
                         })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                        className="sr-only peer"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Drinks Tax Rate (%)</label>
-                      <input
-                        type="number"
-                        value={formData.tax.indoor.drinks}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          tax: {
-                            ...formData.tax,
-                            indoor: { ...formData.tax.indoor, drinks: Number(e.target.value) }
-                          }
-                        })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
                   </div>
                 </div>
 
                 <div>
-                  <h4 className="font-medium mb-2">Outdoor</h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Food Tax Rate (%)</label>
-                      <input
-                        type="number"
-                        value={formData.tax.outdoor.food}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          tax: {
-                            ...formData.tax,
-                            outdoor: { ...formData.tax.outdoor, food: Number(e.target.value) }
-                          }
-                        })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Drinks Tax Rate (%)</label>
-                      <input
-                        type="number"
-                        value={formData.tax.outdoor.drinks}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          tax: {
-                            ...formData.tax,
-                            outdoor: { ...formData.tax.outdoor, drinks: Number(e.target.value) }
-                          }
-                        })}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700">Tax Rate (%)</label>
+                  <input
+                    type="number"
+                    value={formData.tax.rate}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      tax: {
+                        ...formData.tax,
+                        rate: Number(e.target.value)
+                      }
+                    })}
+                    disabled={!formData.tax.enabled}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  />
                 </div>
               </div>
             </div>

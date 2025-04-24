@@ -21,19 +21,17 @@ export const defaultSettings: Settings = {
     taxId: '123456'
   },
   receipt: {
-    header: 'Thank you for your visit!',
-    footer: 'See you soon!',
+    header: 'Vielen Dank für Ihren Besuch!',
+    footer: 'Bis bald!',
     showLogo: true
   },
   tax: {
-    indoor: {
-      food: 19,
-      drinks: 19
-    },
-    outdoor: {
-      food: 7,
-      drinks: 19
-    }
+    enabled: true,
+    rate: 19
+  },
+  printer: {
+    enabled: true,
+    name: 'Default Printer'
   },
   modules: {
     tse: true,
