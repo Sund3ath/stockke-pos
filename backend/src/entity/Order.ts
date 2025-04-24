@@ -29,7 +29,7 @@ export class Order {
   @ManyToOne(() => Table, table => table.orders, { nullable: true })
   table: Table;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: false })
   user: User;
 
   @OneToMany(() => OrderItem, orderItem => orderItem.order, { cascade: true })

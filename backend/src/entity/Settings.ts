@@ -1,9 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { User } from './User';
 
 @Entity()
 export class Settings {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => User, user => user.settings)
+  user: User;
 
   @Column({ default: 'en' })
   language: string;

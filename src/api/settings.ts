@@ -101,6 +101,23 @@ const UPDATE_SETTINGS = gql`
   }
 `;
 
+// Helper function to remove __typename and id fields
+const cleanInputObject = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanInputObject(item));
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const newObj: any = {};
+    Object.keys(obj).forEach(key => {
+      if (key !== '__typename' && key !== 'id') {
+        newObj[key] = cleanInputObject(obj[key]);
+      }
+    });
+    return newObj;
+  }
+  return obj;
+};
+
 // Direkte Client-Methoden
 export const fetchSettings = async (): Promise<Settings | null> => {
   try {
@@ -118,15 +135,18 @@ export const fetchSettings = async (): Promise<Settings | null> => {
 
 export const updateSettings = async (input: Partial<Settings>): Promise<Settings | null> => {
   try {
+    // Remove __typename and id fields from input
+    const cleanInput = cleanInputObject(input);
+    
     const { data } = await apolloClient.mutate({
       mutation: UPDATE_SETTINGS,
-      variables: { input },
+      variables: { input: cleanInput },
       refetchQueries: [{ query: GET_SETTINGS }]
     });
     
     return data.updateSettings;
   } catch (error) {
     console.error('Error updating settings:', error);
-    return null;
+    throw error;
   }
 };

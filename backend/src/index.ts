@@ -14,6 +14,7 @@ import { orderResolvers } from './graphql/resolvers/order.resolver';
 import { productResolvers } from './graphql/resolvers/product.resolver';
 import { tableResolvers } from './graphql/resolvers/table.resolver';
 import { settingsResolver } from './graphql/resolvers/settings.resolver';
+import { dailySalesResolver } from './graphql/resolvers/dailySales.resolver';
 import fs from 'fs';
 import path from 'path';
 
@@ -60,7 +61,8 @@ const resolvers = {
     ...orderResolvers.Query,
     ...productResolvers.Query,
     ...tableResolvers.Query,
-    ...settingsResolver.Query
+    ...settingsResolver.Query,
+    ...dailySalesResolver.Query
   },
   Mutation: {
     ...userResolvers.Mutation,
@@ -98,8 +100,14 @@ async function startServer() {
       expressMiddleware(server, {
         context: async ({ req }) => {
           // Benutzerkontext an den Apollo-Server übergeben
+          const authReq = req as AuthRequest;
           return {
-            user: (req as AuthRequest).user
+            user: authReq.user ? {
+              id: authReq.user.id,
+              username: authReq.user.username,
+              role: authReq.user.role,
+              parentUser: authReq.user.parentUser
+            } : null
           };
         }
       }),

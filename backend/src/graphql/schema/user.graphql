@@ -1,7 +1,14 @@
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
 type User {
   id: ID!
   username: String!
-  role: String!
+  role: UserRole!
+  parentUser: User
+  employees: [User!]
   createdAt: String!
   updatedAt: String!
 }
@@ -19,13 +26,15 @@ input LoginInput {
 input CreateUserInput {
   username: String!
   password: String!
-  role: String = "user"
+  role: UserRole = EMPLOYEE
+  parentUserId: ID
 }
 
 input UpdateUserInput {
   username: String
   password: String
-  role: String
+  role: UserRole
+  parentUserId: ID
 }
 
 extend type Query {

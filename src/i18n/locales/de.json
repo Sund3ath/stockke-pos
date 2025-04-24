@@ -117,6 +117,7 @@
     "delivery": "Lieferung"
   },
   "dashboard": {
+    "title": "Dashboard",
     "totalSales": "Gesamtumsatz",
     "ordersToday": "Bestellungen heute",
     "averageOrderValue": "Durchschnittlicher Bestellwert",

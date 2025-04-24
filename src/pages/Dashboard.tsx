@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../store';
 import { useTranslation } from 'react-i18next';
+import DailySalesReport from '../components/DailySalesReport';
 import {
   BarChart,
   Bar,
@@ -61,6 +62,12 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="h-full overflow-y-auto">
       <div className="p-6 space-y-6">
+        {/* Header with Report Button */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h1>
+          <DailySalesReport date={new Date()} />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900">{t('dashboard.totalSales')}</h3>

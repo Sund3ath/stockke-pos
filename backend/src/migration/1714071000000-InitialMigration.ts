@@ -9,15 +9,15 @@ export class InitialMigration1714071000000 implements MigrationInterface {
         
         // Erstelle einen zusammengesetzten Index für category_sales
         await queryRunner.query(`
-            CREATE INDEX IF NOT EXISTS \`IDX_CATEGORY_SALES_DATE_CATEGORY\` 
-            ON \`category_sales\` (\`sale_date\`, \`category\`)
+            CREATE INDEX IDX_CATEGORY_SALES_DATE_CATEGORY 
+            ON category_sales (sale_date, category)
         `);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         // Lösche den Index
         await queryRunner.query(`
-            DROP INDEX IF EXISTS \`IDX_CATEGORY_SALES_DATE_CATEGORY\` ON \`category_sales\`
+            DROP INDEX IDX_CATEGORY_SALES_DATE_CATEGORY ON category_sales
         `);
     }
 }

@@ -17,7 +17,8 @@ type Order {
   cashReceived: Float
   tableId: String
   table: Table
-  userId: ID
+  user: User!
+  userId: ID!
   createdAt: String!
   updatedAt: String!
 }

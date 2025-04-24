@@ -74,39 +74,57 @@ export const useStore = create<StoreState>((set, get) => ({
   // Authentication
   currentUser: null,
   isAuthenticated: () => isAuthenticated(),
-  isAdmin: () => get().currentUser?.role === 'admin',
+  isAdmin: () => get().currentUser?.role === 'ADMIN',
   initUser: () => {
     const token = localStorage.getItem('token');
     if (token) {
-      // In einer echten Anwendung würden wir den Token dekodieren
-      // Für jetzt setzen wir einfach den Admin-Benutzer, wenn ein Token vorhanden ist
-      set({
-        currentUser: {
-          username: 'admin',
-          role: 'admin'
-        }
-      });
-      return true;
+      try {
+        // Decode the JWT token to get user information
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const decodedToken = JSON.parse(jsonPayload);
+        set({
+          currentUser: {
+            username: decodedToken.username,
+            role: decodedToken.role
+          }
+        });
+        return true;
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        return false;
+      }
     }
     return false;
   },
   login: async (username, password) => {
     try {
-      // Wir verwenden hier nicht die tatsächlichen Anmeldedaten, da die API dies bereits überprüft hat
-      // Wir setzen einfach den Benutzer basierend auf dem Token im localStorage
       const token = localStorage.getItem('token');
-      
       if (token) {
-        // Hier könnten wir den Token dekodieren, um Benutzerinformationen zu erhalten
-        // Für jetzt setzen wir einfach den Benutzernamen und die Rolle basierend auf den Parametern
-        set({
-          currentUser: {
-            username,
-            // Wir nehmen an, dass 'admin' der Admin-Benutzer ist
-            role: username === 'admin' ? 'admin' : 'user'
-          }
-        });
-        return true;
+        try {
+          // Decode the JWT token to get user information
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const decodedToken = JSON.parse(jsonPayload);
+          set({
+            currentUser: {
+              username: decodedToken.username,
+              role: decodedToken.role
+            }
+          });
+          return true;
+        } catch (error) {
+          console.error('Error decoding token:', error);
+          return false;
+        }
       }
       return false;
     } catch (error) {
@@ -147,15 +165,11 @@ export const useStore = create<StoreState>((set, get) => ({
     try {
       const orders = await fetchOrders();
       
-      // Bestellungen im Store speichern
+      // Speichere alle Bestellungen im Store
       set({ orders });
       
-      // Nur nicht abgeschlossene Bestellungen im Store speichern
-      const activeOrders = orders.filter(order => order.status !== 'completed');
-      set({ orders: activeOrders });
-      
       // Geparkten oder ausstehenden Bestellungen den Tischen zuordnen
-      const parkedOrders = activeOrders.filter(order => (order.status === 'parked' || order.status === 'pending') && order.tableId);
+      const parkedOrders = orders.filter(order => (order.status === 'parked' || order.status === 'pending') && order.tableId);
       
       if (parkedOrders.length > 0) {
         set(state => ({
@@ -261,87 +275,103 @@ export const useStore = create<StoreState>((set, get) => ({
   })),
   clearOrder: () => set({ currentOrder: [] }),
   setCurrentOrder: (items) => set({ currentOrder: items }),
-  completeOrder: async (paymentMethod, cashReceived) => {
-    const state = get();
+  completeOrder: async (paymentMethod: 'cash' | 'card', cashReceived?: number) => {
+    const { currentOrder, selectedTable } = get();
     
-    // Wenn keine Bestellung vorhanden ist, nichts tun
-    if (state.currentOrder.length === 0) {
-      console.warn('Keine Bestellung zum Abschließen vorhanden');
-      return;
+    if (currentOrder.length === 0) {
+      throw new Error('Keine Artikel in der Bestellung');
     }
-    
-    const total = state.currentOrder.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    
-    // Prüfen, ob es sich um eine bestehende Bestellung handelt
-    let existingOrderId = null;
-    
-    // Wenn ein Tisch ausgewählt ist und eine Bestellung hat, verwende diese
-    if (state.selectedTable?.currentOrder?.id) {
-      existingOrderId = state.selectedTable.currentOrder.id;
-    }
-    
-    // Bestelldaten für die API vorbereiten
-    const orderInput = {
-      items: state.currentOrder.map(item => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        quantity: item.quantity,
-        price: item.product.price,
-        taxRate: item.product.taxRate || 19
-      })),
-      total,
-      status: 'completed',
-      // timestamp wird im Backend gesetzt
-      paymentMethod,
-      cashReceived,
-      tableId: state.selectedTable?.id,
-      id: existingOrderId // Wenn es eine bestehende Bestellung gibt, sende die ID mit
-    };
     
     try {
-      let finalOrder;
+      // Berechne den Gesamtbetrag
+      const total = currentOrder.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0
+      );
       
-      // Wenn es eine bestehende Bestellung gibt, aktualisiere sie
-      if (existingOrderId) {
-        console.log('Aktualisiere bestehende Bestellung:', existingOrderId);
-        finalOrder = await apiUpdateOrder(existingOrderId, orderInput);
-      } else {
-        // Sonst erstelle eine neue Bestellung
-        console.log('Erstelle neue Bestellung');
-        finalOrder = await apiCreateOrder(orderInput);
-      }
-      
-      if (finalOrder) {
-        console.log('Bestellung erfolgreich in der Datenbank gespeichert:', finalOrder);
-        
-        // Tisch freigeben, falls ein Tisch ausgewählt war oder die Bestellung einem Tisch zugeordnet ist
-        if (state.selectedTable?.id) {
-          get().clearTable(state.selectedTable.id);
-        } else if (finalOrder.tableId) {
-          // Wenn die Bestellung einem Tisch zugeordnet ist, aber kein Tisch ausgewählt ist (z.B. bei einer geparkten Bestellung)
-          get().clearTable(finalOrder.tableId);
-        }
-        
-        // TSE-Transaktion erstellen
-        const tseTransaction = {
-          id: Date.now().toString(),
-          orderId: finalOrder.id,
-          timestamp: finalOrder.timestamp,
-          signature: `TSE-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase(),
-          total: finalOrder.total
-        };
-        
-        // Store aktualisieren
-        set({
-          orders: [...state.orders, finalOrder],
-          currentOrder: [],
-          tseTransactions: [...state.tseTransactions, tseTransaction]
+      // Wenn ein Tisch ausgewählt ist und eine Bestellung hat, aktualisiere diese
+      if (selectedTable?.currentOrder?.id) {
+        // Aktualisiere die bestehende Bestellung
+        const order = await apiUpdateOrder(selectedTable.currentOrder.id, {
+          items: currentOrder.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price,
+            taxRate: item.product.taxRate
+          })),
+          total,
+          status: 'completed',
+          paymentMethod,
+          cashReceived,
+          tableId: selectedTable.id
         });
+        
+        if (order) {
+          // Tisch freigeben
+          await get().clearTable(selectedTable.id);
+          
+          // Bestellung zurücksetzen
+          set({ currentOrder: [] });
+          
+          // TSE-Transaktion erstellen
+          const tseTransaction = {
+            id: Date.now().toString(),
+            orderId: order.id,
+            timestamp: order.timestamp,
+            signature: `TSE-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase(),
+            total: order.total
+          };
+          
+          // Store aktualisieren
+          set(state => ({
+            tseTransactions: [...state.tseTransactions, tseTransaction]
+          }));
+        }
       } else {
-        console.error('Fehler beim Speichern der Bestellung in der Datenbank');
+        // Erstelle eine neue Bestellung
+        const order = await apiCreateOrder({
+          items: currentOrder.map(item => ({
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity: item.quantity,
+            price: item.product.price,
+            taxRate: item.product.taxRate
+          })),
+          total,
+          status: 'completed',
+          paymentMethod,
+          cashReceived,
+          tableId: selectedTable?.id
+        });
+        
+        if (order) {
+          // Wenn ein Tisch ausgewählt ist, räume ihn auf
+          if (selectedTable) {
+            await get().clearTable(selectedTable.id);
+          }
+          
+          // Bestellung zurücksetzen
+          set({ currentOrder: [] });
+          
+          // TSE-Transaktion erstellen
+          const tseTransaction = {
+            id: Date.now().toString(),
+            orderId: order.id,
+            timestamp: order.timestamp,
+            signature: `TSE-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase(),
+            total: order.total
+          };
+          
+          // Store aktualisieren
+          set(state => ({
+            tseTransactions: [...state.tseTransactions, tseTransaction]
+          }));
+        }
       }
     } catch (error) {
-      console.error('Fehler beim Speichern der Bestellung:', error);
+      console.error('Error completing order:', error);
+      throw error;
     }
   },
   cancelOrder: (orderId) => set(state => ({

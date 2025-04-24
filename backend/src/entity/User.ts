@@ -1,5 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne } from 'typeorm';
 import { Settings } from './Settings';
+
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  EMPLOYEE = 'EMPLOYEE'
+}
 
 @Entity('users')
 export class User {
@@ -12,8 +17,18 @@ export class User {
   @Column()
   passwordHash: string;
 
-  @Column({ default: 'user' })
-  role: string;
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.EMPLOYEE
+  })
+  role: UserRole;
+
+  @ManyToOne(() => User, user => user.employees, { nullable: true })
+  parentUser: User | null;
+
+  @OneToMany(() => User, user => user.parentUser)
+  employees: User[];
 
   @OneToMany(() => Settings, settings => settings.user)
   settings: Settings[];

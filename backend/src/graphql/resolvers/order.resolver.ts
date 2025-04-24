@@ -63,13 +63,16 @@ export const orderResolvers = {
             }
           }
           
-          // Benutzer zuweisen, falls vorhanden
-          if (context.user) {
-            const user = await userRepository.findOne({ where: { id: context.user.id } });
-            if (user) {
-              order.user = user;
-            }
+          // Benutzer muss vorhanden sein
+          if (!context.user) {
+            throw new Error('Ein Benutzer muss für die Bestellung angegeben werden');
           }
+          
+          const user = await userRepository.findOne({ where: { id: context.user.id } });
+          if (!user) {
+            throw new Error('Der angegebene Benutzer wurde nicht gefunden');
+          }
+          order.user = user;
           
           // Bestellung speichern
           const savedOrder = await queryRunner.manager.save(order);

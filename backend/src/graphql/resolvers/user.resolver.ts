@@ -1,5 +1,5 @@
 import { AppDataSource } from '../../config/database';
-import { User } from '../../entity';
+import { User, UserRole } from '../../entity';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -27,28 +27,30 @@ export const userResolvers = {
       
       return await userRepository.findOne({ 
         where: { id: context.user.id },
-        relations: ['settings']
+        relations: ['settings', 'parentUser', 'employees']
       });
     },
     
     // Alle Benutzer (nur für Admins)
     users: async (_: any, __: any, context: any) => {
-      if (!context.user || context.user.role !== 'admin') {
+      if (!context.user || context.user.role !== UserRole.ADMIN) {
         throw new Error('Nicht autorisiert');
       }
       
-      return await userRepository.find();
+      return await userRepository.find({
+        relations: ['parentUser', 'employees']
+      });
     },
     
     // Benutzer nach ID (nur für Admins)
     user: async (_: any, { id }: { id: number }, context: any) => {
-      if (!context.user || context.user.role !== 'admin') {
+      if (!context.user || context.user.role !== UserRole.ADMIN) {
         throw new Error('Nicht autorisiert');
       }
       
       return await userRepository.findOne({ 
         where: { id },
-        relations: ['settings']
+        relations: ['settings', 'parentUser', 'employees']
       });
     }
   },
@@ -59,7 +61,10 @@ export const userResolvers = {
       const { username, password } = input;
       
       // Benutzer finden
-      const user = await userRepository.findOne({ where: { username } });
+      const user = await userRepository.findOne({ 
+        where: { username },
+        relations: ['parentUser', 'employees']
+      });
       if (!user) {
         throw new Error('Ungültiger Benutzername oder Passwort');
       }
@@ -80,17 +85,25 @@ export const userResolvers = {
     },
     
     // Benutzer erstellen (nur für Admins)
-    createUser: async (_: any, { input }: { input: { username: string, password: string, role: string } }, context: any) => {
-      if (!context.user || context.user.role !== 'admin') {
+    createUser: async (_: any, { input }: { input: { username: string, password: string, role: UserRole, parentUserId?: number } }, context: any) => {
+      if (!context.user || context.user.role !== UserRole.ADMIN) {
         throw new Error('Nicht autorisiert');
       }
       
-      const { username, password, role } = input;
+      const { username, password, role, parentUserId } = input;
       
       // Prüfen, ob Benutzername bereits existiert
       const existingUser = await userRepository.findOne({ where: { username } });
       if (existingUser) {
         throw new Error('Benutzername bereits vergeben');
+      }
+      
+      let parentUser = null;
+      if (parentUserId) {
+        parentUser = await userRepository.findOne({ where: { id: parentUserId } });
+        if (!parentUser || parentUser.role !== UserRole.ADMIN) {
+          throw new Error('Ungültiger Parent User');
+        }
       }
       
       // Passwort hashen
@@ -100,25 +113,29 @@ export const userResolvers = {
       const user = userRepository.create({
         username,
         passwordHash,
-        role: role || 'user'
+        role: role || UserRole.EMPLOYEE,
+        parentUser: parentUser || context.user // Wenn kein parentUserId angegeben ist, verwende den erstellenden Admin
       });
       
       return await userRepository.save(user);
     },
     
     // Benutzer aktualisieren (nur für Admins oder eigenen Account)
-    updateUser: async (_: any, { id, input }: { id: number, input: { username?: string, password?: string, role?: string } }, context: any) => {
+    updateUser: async (_: any, { id, input }: { id: number, input: { username?: string, password?: string, role?: UserRole, parentUserId?: number } }, context: any) => {
       if (!context.user) {
         throw new Error('Nicht autorisiert');
       }
       
       // Nur Admins können andere Benutzer bearbeiten
-      if (context.user.id !== id && context.user.role !== 'admin') {
+      if (context.user.id !== id && context.user.role !== UserRole.ADMIN) {
         throw new Error('Nicht autorisiert');
       }
       
       // Benutzer finden
-      const user = await userRepository.findOne({ where: { id } });
+      const user = await userRepository.findOne({ 
+        where: { id },
+        relations: ['parentUser']
+      });
       if (!user) {
         throw new Error('Benutzer nicht gefunden');
       }
@@ -133,8 +150,16 @@ export const userResolvers = {
       }
       
       // Nur Admins können die Rolle ändern
-      if (input.role && context.user.role === 'admin') {
+      if (input.role && context.user.role === UserRole.ADMIN) {
         user.role = input.role;
+      }
+      
+      if (input.parentUserId && context.user.role === UserRole.ADMIN) {
+        const newParentUser = await userRepository.findOne({ where: { id: input.parentUserId } });
+        if (!newParentUser || newParentUser.role !== UserRole.ADMIN) {
+          throw new Error('Ungültiger Parent User');
+        }
+        user.parentUser = newParentUser;
       }
       
       return await userRepository.save(user);
@@ -142,7 +167,7 @@ export const userResolvers = {
     
     // Benutzer löschen (nur für Admins)
     deleteUser: async (_: any, { id }: { id: number }, context: any) => {
-      if (!context.user || context.user.role !== 'admin') {
+      if (!context.user || context.user.role !== UserRole.ADMIN) {
         throw new Error('Nicht autorisiert');
       }
       

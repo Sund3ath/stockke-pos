@@ -1,23 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../config/database';
-import { User } from '../entity';
+import { User, UserRole } from '../entity';
 
 // Interface für den dekodierten Token
 interface DecodedToken {
   id: number;
   username: string;
-  role: string;
+  role: UserRole;
   iat: number;
   exp: number;
 }
 
-// Interface für den erweiterten Request mit Benutzer
+// Interface für den Request mit Benutzer
 export interface AuthRequest extends Request {
   user?: {
     id: number;
     username: string;
-    role: string;
+    role: UserRole;
+    parentUser: {
+      id: number;
+      username: string;
+      role: UserRole;
+    } | null;
   };
 }
 
@@ -42,19 +47,27 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
           const decoded = jwt.verify(token, secret) as DecodedToken;
           
           // Benutzer in den Request-Kontext setzen
-          req.user = {
-            id: decoded.id,
-            username: decoded.username,
-            role: decoded.role
-          };
-          
-          // Optional: Benutzer aus der Datenbank laden, um sicherzustellen, dass er noch existiert
           const userRepository = AppDataSource.getRepository(User);
-          const user = await userRepository.findOne({ where: { id: decoded.id } });
+          const user = await userRepository.findOne({ 
+            where: { id: decoded.id },
+            relations: ['parentUser']
+          });
           
           if (!user) {
             // Benutzer existiert nicht mehr
             req.user = undefined;
+          } else {
+            // Benutzer mit vollständigen Daten setzen
+            req.user = {
+              id: user.id,
+              username: user.username,
+              role: user.role,
+              parentUser: user.parentUser ? {
+                id: user.parentUser.id,
+                username: user.parentUser.username,
+                role: user.parentUser.role
+              } : null
+            };
           }
         } catch (error) {
           // Token ist ungültig oder abgelaufen
@@ -90,7 +103,7 @@ export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction
     return res.status(401).json({ error: 'Nicht authentifiziert' });
   }
   
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== UserRole.ADMIN) {
     return res.status(403).json({ error: 'Keine Berechtigung' });
   }
   

@@ -27,8 +27,11 @@ export const LoginForm: React.FC = () => {
       const result = await apiLogin(username, password);
       
       if (result.success && result.user) {
-        // Benutzer im Store setzen (über die vorhandene login-Funktion)
+        // Benutzer im Store setzen
         await storeLogin(username, password);
+        
+        // Seite neu laden, um den aktualisierten Token zu verwenden
+        window.location.reload();
       } else {
         setError('Ungültiger Benutzername oder Passwort');
       }

@@ -156,6 +156,27 @@ const UPDATE_ORDER_STATUS = gql`
   }
 `;
 
+const GET_DAILY_SALES = gql`
+  query GetDailySales($date: String!) {
+    dailySales(date: $date) {
+      date
+      total
+      orderCount
+      items {
+        productId
+        productName
+        quantity
+        total
+        taxRate
+      }
+    }
+  }
+`;
+
+interface OrdersQueryResult {
+  orders: ApiOrder[];
+}
+
 // Direkte Client-Methoden
 export const fetchOrders = async (): Promise<Order[]> => {
   try {
@@ -195,7 +216,17 @@ export const createOrder = async (input: any): Promise<Order | null> => {
     const { data } = await apolloClient.mutate({
       mutation: CREATE_ORDER,
       variables: { input },
-      refetchQueries: [{ query: GET_ORDERS }]
+      update: (cache, { data: { createOrder } }) => {
+        const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
+        if (existingOrders) {
+          cache.writeQuery({
+            query: GET_ORDERS,
+            data: {
+              orders: [...existingOrders.orders, createOrder]
+            }
+          });
+        }
+      }
     });
     
     if (data.createOrder) {
@@ -232,7 +263,19 @@ export const updateOrder = async (id: string, input: any): Promise<Order | null>
     const { data } = await apolloClient.mutate({
       mutation: UPDATE_ORDER,
       variables: { id, input },
-      refetchQueries: [{ query: GET_ORDERS }]
+      update: (cache, { data: { updateOrder } }) => {
+        const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
+        if (existingOrders) {
+          cache.writeQuery({
+            query: GET_ORDERS,
+            data: {
+              orders: existingOrders.orders.map((order: ApiOrder) => 
+                order.id === updateOrder.id ? updateOrder : order
+              )
+            }
+          });
+        }
+      }
     });
     
     if (data.updateOrder) {
@@ -241,6 +284,21 @@ export const updateOrder = async (id: string, input: any): Promise<Order | null>
     return null;
   } catch (error) {
     console.error('Error updating order:', error);
+    return null;
+  }
+};
+
+export const fetchDailySales = async (date: string) => {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_DAILY_SALES,
+      variables: { date },
+      fetchPolicy: 'network-only'
+    });
+    
+    return data.dailySales;
+  } catch (error) {
+    console.error('Error fetching daily sales:', error);
     return null;
   }
 };

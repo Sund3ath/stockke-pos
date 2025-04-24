@@ -109,6 +109,7 @@
     "delivery": "Delivery"
   },
   "dashboard": {
+    "title": "Dashboard",
     "totalSales": "Total Sales",
     "ordersToday": "Orders Today",
     "averageOrderValue": "Average Order Value",

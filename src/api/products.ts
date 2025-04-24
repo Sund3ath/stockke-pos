@@ -42,6 +42,10 @@ export const GET_PRODUCTS = gql`
       description
       inStock
       taxRate
+      adminUser {
+        id
+        username
+      }
     }
   }
 `;
@@ -57,6 +61,10 @@ export const GET_PRODUCT = gql`
       description
       inStock
       taxRate
+      adminUser {
+        id
+        username
+      }
     }
   }
 `;
@@ -73,6 +81,10 @@ export const CREATE_PRODUCT = gql`
       description
       inStock
       taxRate
+      adminUser {
+        id
+        username
+      }
     }
   }
 `;
@@ -88,6 +100,10 @@ export const UPDATE_PRODUCT = gql`
       description
       inStock
       taxRate
+      adminUser {
+        id
+        username
+      }
     }
   }
 `;

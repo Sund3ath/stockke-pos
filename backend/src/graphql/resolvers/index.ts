@@ -1,14 +1,16 @@
-import { userResolver } from './user.resolver';
-import { productResolver } from './product.resolver';
-import { orderResolver } from './order.resolver';
-import { tableResolver } from './table.resolver';
+import { userResolvers } from './user.resolver';
+import { productResolvers } from './product.resolver';
+import { orderResolvers } from './order.resolver';
+import { tableResolvers } from './table.resolver';
 import { settingsResolver } from './settings.resolver';
+import { dailySalesResolver } from './dailySales.resolver';
 
 // Kombiniere alle Resolver
 export const resolvers = [
-  userResolver,
-  productResolver,
-  orderResolver,
-  tableResolver,
-  settingsResolver
+  userResolvers,
+  productResolvers,
+  orderResolvers,
+  tableResolvers,
+  settingsResolver,
+  dailySalesResolver
 ];
