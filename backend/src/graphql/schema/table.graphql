@@ -1,0 +1,17 @@
+type Table {
+  id: ID!
+  name: String!
+  occupied: Boolean!
+  orders: [Order!]
+  createdAt: String!
+  updatedAt: String!
+}
+
+extend type Query {
+  tables: [Table!]!
+  table(id: ID!): Table
+}
+
+extend type Mutation {
+  updateTableStatus(id: ID!, occupied: Boolean!): Table!
+}
