@@ -20,7 +20,6 @@ const product_resolver_1 = require("./graphql/resolvers/product.resolver");
 const table_resolver_1 = require("./graphql/resolvers/table.resolver");
 const settings_resolver_1 = require("./graphql/resolvers/settings.resolver");
 const dailySales_resolver_1 = require("./graphql/resolvers/dailySales.resolver");
-const category_1 = require("./graphql/resolvers/category");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 // Lade Umgebungsvariablen
@@ -59,16 +58,14 @@ const resolvers = {
         ...product_resolver_1.productResolvers.Query,
         ...table_resolver_1.tableResolvers.Query,
         ...settings_resolver_1.settingsResolver.Query,
-        ...dailySales_resolver_1.dailySalesResolver.Query,
-        ...category_1.categoryResolvers.Query
+        ...dailySales_resolver_1.dailySalesResolver.Query
     },
     Mutation: {
         ...user_resolver_1.userResolvers.Mutation,
         ...order_resolver_1.orderResolvers.Mutation,
         ...product_resolver_1.productResolvers.Mutation,
         ...table_resolver_1.tableResolvers.Mutation,
-        ...settings_resolver_1.settingsResolver.Mutation,
-        ...category_1.categoryResolvers.Mutation
+        ...settings_resolver_1.settingsResolver.Mutation
     }
 };
 // Erstelle den Apollo-Server

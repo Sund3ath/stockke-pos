@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/database';
-import { User } from '../entity';
+import { User, UserRole } from '../entity/User';
 import bcrypt from 'bcrypt';
 
 /**
@@ -30,7 +30,7 @@ async function createAdminUser() {
     const adminUser = userRepository.create({
       username: 'admin',
       passwordHash,
-      role: 'admin'
+      role: UserRole.ADMIN
     });
 
     // Admin-Benutzer speichern

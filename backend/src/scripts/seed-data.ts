@@ -1,5 +1,5 @@
 import { AppDataSource } from '../config/database';
-import { User } from '../entity';
+import { User, UserRole } from '../entity/User';
 import bcrypt from 'bcrypt';
 
 /**
@@ -31,13 +31,13 @@ async function seedData() {
     const adminUser = userRepository.create({
       username: 'admin',
       passwordHash: adminPasswordHash,
-      role: 'admin'
+      role: UserRole.ADMIN
     });
 
     const employeeUser = userRepository.create({
       username: 'mitarbeiter',
       passwordHash: employeePasswordHash,
-      role: 'user'
+      role: UserRole.EMPLOYEE
     });
 
     // Benutzer speichern
