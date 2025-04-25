@@ -3,9 +3,11 @@ import { useStore } from '../store';
 import { format } from 'date-fns';
 import { FileText, XCircle } from 'lucide-react';
 import { generateInvoice } from '../utils/invoice';
+import { useTranslation } from 'react-i18next';
 
 export const Orders: React.FC = () => {
   const { orders, cancelOrder } = useStore();
+  const { t } = useTranslation();
 
   const handleRegenerateInvoice = (order: typeof orders[0]) => {
     generateInvoice(order.items, order.total);
@@ -15,7 +17,7 @@ export const Orders: React.FC = () => {
     <div className="p-6">
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-900">Orders History</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('orders.title')}</h2>
         </div>
         
         <div className="overflow-x-auto">
@@ -23,25 +25,28 @@ export const Orders: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order ID
+                  {t('orders.orderId')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                  {t('orders.date')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Items
+                  {t('orders.user')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total
+                  {t('orders.items')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('orders.total')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  TSE Signature
+                  {t('orders.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('orders.tseSignature')}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t('orders.actions')}
                 </th>
               </tr>
             </thead>
@@ -53,6 +58,9 @@ export const Orders: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {format(new Date(order.timestamp), 'PPpp')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {order.user?.username || t('orders.unknownUser')}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
                     {order.items.map(item => 

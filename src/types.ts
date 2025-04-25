@@ -2,7 +2,7 @@ export interface Product {
   id: string;
   name: string;
   price: number;
-  category: 'mains' | 'sides' | 'drinks';
+  category: 'mains' | 'sides' | 'drinks' | 'desserts' | 'starters' | 'salads' | 'alcoholic' | 'non-alcoholic' | 'coffee' | 'tea' | 'specials';
   image: string;
   description?: string;
   inStock: boolean;
@@ -90,6 +90,10 @@ export interface Order {
   tableId?: string;
   note?: string;
   isTakeaway?: boolean;
+  user: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface Table {

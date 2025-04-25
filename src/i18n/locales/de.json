@@ -114,7 +114,9 @@
     "vat": "MwSt",
     "net": "Netto",
     "takeaway": "Zum Mitnehmen",
-    "delivery": "Lieferung"
+    "delivery": "Lieferung",
+    "user": "Benutzer",
+    "unknownUser": "Unbekannt"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -189,7 +191,19 @@
     "categoryName": "Kategoriename",
     "deleteCategoryConfirmation": "Sind Sie sicher, dass Sie diese Kategorie löschen möchten?",
     "deleteCategoryWarning": "Alle Produkte in dieser Kategorie werden in 'Nicht kategorisiert' verschoben.",
-    "uncategorized": "Nicht kategorisiert"
+    "uncategorized": "Nicht kategorisiert",
+    "categories": {
+      "mains": "Hauptgerichte",
+      "starters": "Vorspeisen",
+      "sides": "Beilagen",
+      "salads": "Salate",
+      "desserts": "Desserts",
+      "alcoholic": "Alkoholische Getränke",
+      "non-alcoholic": "Alkoholfreie Getränke",
+      "coffee": "Kaffee",
+      "tea": "Tee",
+      "specials": "Spezialitäten"
+    }
   },
   "customers": {
     "title": "Kunden",

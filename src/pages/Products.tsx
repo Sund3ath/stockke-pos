@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { Plus, Edit2, Trash2, X } from 'lucide-react';
 import { Product } from '../types';
+import { useTranslation } from 'react-i18next';
 
 export const Products: React.FC = () => {
   const { products, addProduct, updateProduct, deleteProduct } = useStore();
@@ -10,11 +11,13 @@ export const Products: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    category: 'mains',
+    category: 'mains' as Product['category'],
     image: '',
     description: '',
-    inStock: true
+    inStock: true,
+    taxRate: 19 as 7 | 19
   });
+  const { t } = useTranslation();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,10 +37,11 @@ export const Products: React.FC = () => {
     setFormData({
       name: '',
       price: '',
-      category: 'mains',
+      category: 'mains' as Product['category'],
       image: '',
       description: '',
-      inStock: true
+      inStock: true,
+      taxRate: 19 as 7 | 19
     });
   };
 
@@ -49,7 +53,8 @@ export const Products: React.FC = () => {
       category: product.category,
       image: product.image,
       description: product.description || '',
-      inStock: product.inStock
+      inStock: product.inStock,
+      taxRate: product.taxRate
     });
     setShowModal(true);
   };
@@ -178,9 +183,16 @@ export const Products: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   >
-                    <option value="mains">Mains</option>
-                    <option value="sides">Sides</option>
-                    <option value="drinks">Drinks</option>
+                    <option value="mains">{t('products.categories.mains')}</option>
+                    <option value="starters">{t('products.categories.starters')}</option>
+                    <option value="sides">{t('products.categories.sides')}</option>
+                    <option value="salads">{t('products.categories.salads')}</option>
+                    <option value="desserts">{t('products.categories.desserts')}</option>
+                    <option value="alcoholic">{t('products.categories.alcoholic')}</option>
+                    <option value="non-alcoholic">{t('products.categories.non-alcoholic')}</option>
+                    <option value="coffee">{t('products.categories.coffee')}</option>
+                    <option value="tea">{t('products.categories.tea')}</option>
+                    <option value="specials">{t('products.categories.specials')}</option>
                   </select>
                 </div>
 

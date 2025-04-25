@@ -18,6 +18,7 @@ import { CheckoutModal } from './CheckoutModal';
 import { ReceiptsModal } from './ReceiptsModal';
 import { ProductGrid } from './ProductGrid';
 import { formatPrice } from '../utils/currency';
+import { updateOrder as apiUpdateOrder } from '../api/orders';
 
 export const POS: React.FC = () => {
   const { t } = useTranslation();
@@ -60,8 +61,10 @@ export const POS: React.FC = () => {
       return;
     }
 
+    // Check if there's an existing order for this table
+    const existingOrder = selectedTable.currentOrder;
     const order = {
-      id: Date.now().toString(),
+      id: existingOrder?.id || Date.now().toString(),
       items: currentOrder,
       total,
       status: 'pending' as const,
@@ -69,6 +72,22 @@ export const POS: React.FC = () => {
       paymentMethod: 'cash' as const,
       tableId: selectedTable.id
     };
+
+    // If there's an existing order, update it in the database
+    if (existingOrder) {
+      apiUpdateOrder(existingOrder.id, {
+        items: currentOrder.map(item => ({
+          productId: item.product.id,
+          productName: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price,
+          taxRate: item.product.taxRate
+        })),
+        total,
+        status: 'pending',
+        tableId: selectedTable.id
+      });
+    }
 
     occupyTable(selectedTable.id, order);
     clearOrder();

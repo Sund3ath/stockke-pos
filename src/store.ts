@@ -398,7 +398,7 @@ export const useStore = create<StoreState>((set, get) => ({
           id: Date.now().toString(),
           items: currentOrder,
           total: currentOrder.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-          status: 'pending', // Status auf 'pending' setzen, wenn eine Bestellung an einem Tisch geparkt wird
+          status: 'pending',
           timestamp: new Date().toISOString(),
           paymentMethod: 'cash',
           tableId: previousTable.id
@@ -433,7 +433,9 @@ export const useStore = create<StoreState>((set, get) => ({
     // If the new table has an order, load it
     const newTable = get().tables.find(t => String(t.id) === String(tableId));
     if (newTable?.currentOrder) {
-      state.setCurrentOrder(newTable.currentOrder.items);
+      // If there's an existing order, update it instead of creating a new one
+      const existingOrder = newTable.currentOrder;
+      state.setCurrentOrder(existingOrder.items);
     }
   },
   occupyTable: async (tableId, order) => {
@@ -451,25 +453,35 @@ export const useStore = create<StoreState>((set, get) => ({
         })),
         total: order.total,
         status: order.status,
-        // timestamp wird im Backend gesetzt
         paymentMethod: order.paymentMethod,
         tableId: tableId
       };
       
-      // Bestellung in der Datenbank speichern
-      const createdOrder = await apiCreateOrder(orderInput);
+      // Prüfen, ob es eine existierende Bestellung gibt
+      const existingOrder = state.tables.find(t => String(t.id) === String(tableId))?.currentOrder;
       
-      if (createdOrder) {
-        console.log('Tischbestellung erfolgreich in der Datenbank gespeichert:', createdOrder);
+      let updatedOrder;
+      if (existingOrder) {
+        // Bestellung aktualisieren
+        updatedOrder = await apiUpdateOrder(existingOrder.id, orderInput);
+      } else {
+        // Neue Bestellung erstellen
+        updatedOrder = await apiCreateOrder(orderInput);
+      }
+      
+      if (updatedOrder) {
+        console.log('Tischbestellung erfolgreich in der Datenbank gespeichert:', updatedOrder);
         
         // Store aktualisieren
         set(state => ({
           tables: state.tables.map(table =>
             String(table.id) === String(tableId)
-              ? { ...table, occupied: true, currentOrder: createdOrder }
+              ? { ...table, occupied: true, currentOrder: updatedOrder }
               : table
           ),
-          orders: [...state.orders, createdOrder]
+          orders: existingOrder 
+            ? state.orders.map(o => o.id === existingOrder.id ? updatedOrder : o)
+            : [...state.orders, updatedOrder]
         }));
       } else {
         console.error('Fehler beim Speichern der Tischbestellung in der Datenbank');
