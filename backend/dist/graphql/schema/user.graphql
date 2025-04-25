@@ -1,0 +1,51 @@
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+}
+
+type User {
+  id: ID!
+  username: String!
+  role: UserRole!
+  parentUser: User
+  employees: [User!]
+  createdAt: String!
+  updatedAt: String!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input CreateUserInput {
+  username: String!
+  password: String!
+  role: UserRole = EMPLOYEE
+  parentUserId: ID
+}
+
+input UpdateUserInput {
+  username: String
+  password: String
+  role: UserRole
+  parentUserId: ID
+}
+
+extend type Query {
+  me: User
+  users: [User!]!
+  user(id: ID!): User
+}
+
+extend type Mutation {
+  login(input: LoginInput!): AuthPayload!
+  createUser(input: CreateUserInput!): User!
+  updateUser(id: ID!, input: UpdateUserInput!): User!
+  deleteUser(id: ID!): Boolean!
+}
