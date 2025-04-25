@@ -53,8 +53,8 @@ exports.settingsResolver = {
                 let settings = await settingsRepository.findOne({ where: { id: 1 } });
                 // Wenn keine Einstellungen existieren, erstelle Standardeinstellungen
                 if (!settings) {
-                    settings = settingsRepository.create(defaultSettings);
-                    await settingsRepository.save(settings);
+                    const newSettings = settingsRepository.create(defaultSettings);
+                    settings = await settingsRepository.save(newSettings);
                 }
                 return settings;
             }
@@ -128,8 +128,8 @@ exports.settingsResolver = {
                     };
                 }
                 // Speichere die aktualisierten Einstellungen
-                await settingsRepository.save(settings);
-                return settings;
+                const updatedSettings = await settingsRepository.save(settings);
+                return updatedSettings;
             }
             catch (error) {
                 console.error('Fehler beim Aktualisieren der Einstellungen:', error);

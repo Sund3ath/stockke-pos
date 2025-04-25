@@ -100,8 +100,8 @@ export const settingsResolver = {
         
         // Wenn keine Einstellungen existieren, erstelle Standardeinstellungen
         if (!settings) {
-          settings = settingsRepository.create(defaultSettings);
-          await settingsRepository.save(settings);
+          const newSettings = settingsRepository.create(defaultSettings);
+          settings = await settingsRepository.save(newSettings);
         }
         
         return settings;
@@ -185,9 +185,9 @@ export const settingsResolver = {
         }
         
         // Speichere die aktualisierten Einstellungen
-        await settingsRepository.save(settings);
+        const updatedSettings = await settingsRepository.save(settings);
         
-        return settings;
+        return updatedSettings;
       } catch (error) {
         console.error('Fehler beim Aktualisieren der Einstellungen:', error);
         throw new Error('Fehler beim Aktualisieren der Einstellungen');
