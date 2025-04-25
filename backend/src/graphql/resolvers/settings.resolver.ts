@@ -1,11 +1,12 @@
 import { AppDataSource } from '../../config/database';
 import { Settings } from '../../entity';
+import { DeepPartial } from 'typeorm';
 
 // Repository für Einstellungen
 const settingsRepository = AppDataSource.getRepository(Settings);
 
 // Standardeinstellungen
-const defaultSettings = {
+const defaultSettings: DeepPartial<Settings> = {
   language: 'de',
   currency: {
     code: 'EUR',
@@ -44,6 +45,51 @@ const defaultSettings = {
   }
 };
 
+// Input type for settings update
+interface UpdateSettingsInput {
+  language?: string;
+  timezone?: string;
+  currency?: {
+    code?: string;
+    symbol?: string;
+    position?: string;
+  };
+  tse?: {
+    apiKey?: string;
+    deviceId?: string;
+    environment?: string;
+  };
+  company?: {
+    name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+    taxId?: string;
+  };
+  receipt?: {
+    header?: string;
+    footer?: string;
+    showLogo?: boolean;
+  };
+  tax?: {
+    enabled?: boolean;
+    rate?: number;
+  };
+  printer?: {
+    enabled?: boolean;
+    name?: string;
+  };
+  modules?: {
+    tse?: boolean;
+    customers?: boolean;
+  };
+  lieferando?: {
+    apiKey?: string;
+    restaurantId?: string;
+    apiUrl?: string;
+  };
+}
+
 // Resolver für Einstellungen
 export const settingsResolver = {
   Query: {
@@ -67,7 +113,7 @@ export const settingsResolver = {
   },
   
   Mutation: {
-    updateSettings: async (_: any, { input }: { input: any }) => {
+    updateSettings: async (_: any, { input }: { input: UpdateSettingsInput }) => {
       try {
         // Prüfen, ob Einstellungen existieren
         let settings = await settingsRepository.findOne({ where: { id: 1 } });

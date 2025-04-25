@@ -65,9 +65,9 @@ export class Settings {
 
   @Column('simple-json', { nullable: true })
   lieferando?: {
-    apiKey: string;
-    restaurantId: string;
-    apiUrl: string;
+    apiKey?: string;
+    restaurantId?: string;
+    apiUrl?: string;
   };
 
   @CreateDateColumn()
