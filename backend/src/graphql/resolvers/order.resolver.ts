@@ -1,17 +1,56 @@
 import { AppDataSource } from '../../config/database';
 import { Order, OrderItem, User, Table } from '../../entity';
+import { FindOptionsWhere } from 'typeorm';
 
 // Repositories
 const orderRepository = AppDataSource.getRepository(Order);
 const orderItemRepository = AppDataSource.getRepository(OrderItem);
 const userRepository = AppDataSource.getRepository(User);
 
+// Input types
+interface CreateOrderInput {
+  total: number;
+  status: string;
+  paymentMethod: string;
+  cashReceived?: number;
+  tableId?: string;
+  items: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    taxRate: number;
+  }>;
+}
+
+interface UpdateOrderInput {
+  total?: number;
+  status?: string;
+  timestamp?: string;
+  paymentMethod?: string;
+  cashReceived?: number;
+  tableId?: string;
+  items?: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    price: number;
+    taxRate: number;
+  }>;
+}
+
 export const orderResolvers = {
   Query: {
     // Alle Bestellungen abrufen
     orders: async (_: any, __: any, context: any) => {
       try {
+        const where: FindOptionsWhere<Order> = {};
+        if (context.user) {
+          where.user = { id: context.user.id };
+        }
+        
         return await orderRepository.find({
+          where,
           relations: ['items', 'user', 'table'],
           order: { createdAt: 'DESC' }
         });
@@ -24,8 +63,13 @@ export const orderResolvers = {
     // Bestellung nach ID abrufen
     order: async (_: any, { id }: { id: number }, context: any) => {
       try {
+        const where: FindOptionsWhere<Order> = { id };
+        if (context.user) {
+          where.user = { id: context.user.id };
+        }
+        
         return await orderRepository.findOne({
-          where: { id },
+          where,
           relations: ['items', 'user', 'table']
         });
       } catch (error) {
@@ -37,7 +81,7 @@ export const orderResolvers = {
   
   Mutation: {
     // Neue Bestellung erstellen
-    createOrder: async (_: any, { input }: any, context: any) => {
+    createOrder: async (_: any, { input }: { input: CreateOrderInput }, context: any) => {
       try {
         // Transaktion starten
         const queryRunner = AppDataSource.createQueryRunner();
@@ -49,15 +93,19 @@ export const orderResolvers = {
           const order = new Order();
           order.total = input.total;
           order.status = input.status;
-          order.timestamp = new Date().toISOString(); // Immer aktuellen Zeitstempel setzen
+          order.timestamp = new Date().toISOString();
           order.paymentMethod = input.paymentMethod;
-          order.cashReceived = input.cashReceived;
-          order.tableId = input.tableId;
+          if (input.cashReceived !== undefined) {
+            order.cashReceived = input.cashReceived;
+          }
+          if (input.tableId !== undefined) {
+            order.tableId = input.tableId;
+          }
           
           // Tisch zuweisen, falls vorhanden
           if (input.tableId) {
             const tableRepository = AppDataSource.getRepository(Table);
-            const table = await tableRepository.findOne({ where: { id: input.tableId } });
+            const table = await tableRepository.findOne({ where: { id: Number(input.tableId) } });
             if (table) {
               order.table = table;
             }
@@ -78,7 +126,7 @@ export const orderResolvers = {
           const savedOrder = await queryRunner.manager.save(order);
           
           // Bestellpositionen erstellen und speichern
-          const orderItems = input.items.map((item: any) => {
+          const orderItems = input.items.map((item) => {
             const orderItem = new OrderItem();
             orderItem.productId = item.productId;
             orderItem.productName = item.productName;
@@ -117,8 +165,13 @@ export const orderResolvers = {
     // Bestellstatus aktualisieren
     updateOrderStatus: async (_: any, { id, status }: { id: number, status: string }, context: any) => {
       try {
+        const where: FindOptionsWhere<Order> = { id };
+        if (context.user) {
+          where.user = { id: context.user.id };
+        }
+        
         const order = await orderRepository.findOne({
-          where: { id },
+          where,
           relations: ['items', 'user', 'table']
         });
         
@@ -137,11 +190,16 @@ export const orderResolvers = {
     },
     
     // Bestellung aktualisieren
-    updateOrder: async (_: any, { id, input }: { id: string, input: any }, context: any) => {
+    updateOrder: async (_: any, { id, input }: { id: string, input: UpdateOrderInput }, context: any) => {
       try {
+        const where: FindOptionsWhere<Order> = { id: Number(id) };
+        if (context.user) {
+          where.user = { id: context.user.id };
+        }
+        
         // Bestellung finden
         const order = await orderRepository.findOne({
-          where: { id: Number(id) },
+          where,
           relations: ['items', 'user', 'table']
         });
         
@@ -167,12 +225,11 @@ export const orderResolvers = {
             order.tableId = input.tableId;
             if (input.tableId) {
               const tableRepository = AppDataSource.getRepository(Table);
-              const table = await tableRepository.findOne({ where: { id: input.tableId } });
+              const table = await tableRepository.findOne({ where: { id: Number(input.tableId) } });
               if (table) {
                 order.table = table;
               }
             } else {
-              // Tisch-Referenz entfernen, mit leerem String
               order.tableId = '';
             }
           }
@@ -186,7 +243,7 @@ export const orderResolvers = {
             await queryRunner.manager.delete(OrderItem, { order: { id: order.id } });
             
             // Neue Bestellpositionen erstellen und speichern
-            const orderItems = input.items.map((item: any) => {
+            const orderItems = input.items.map((item) => {
               const orderItem = new OrderItem();
               orderItem.productId = item.productId;
               orderItem.productName = item.productName;

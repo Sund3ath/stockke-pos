@@ -12,7 +12,12 @@ exports.orderResolvers = {
         // Alle Bestellungen abrufen
         orders: async (_, __, context) => {
             try {
+                const where = {};
+                if (context.user) {
+                    where.user = { id: context.user.id };
+                }
                 return await orderRepository.find({
+                    where,
                     relations: ['items', 'user', 'table'],
                     order: { createdAt: 'DESC' }
                 });
@@ -25,8 +30,12 @@ exports.orderResolvers = {
         // Bestellung nach ID abrufen
         order: async (_, { id }, context) => {
             try {
+                const where = { id };
+                if (context.user) {
+                    where.user = { id: context.user.id };
+                }
                 return await orderRepository.findOne({
-                    where: { id },
+                    where,
                     relations: ['items', 'user', 'table']
                 });
             }
@@ -49,14 +58,18 @@ exports.orderResolvers = {
                     const order = new entity_1.Order();
                     order.total = input.total;
                     order.status = input.status;
-                    order.timestamp = new Date().toISOString(); // Immer aktuellen Zeitstempel setzen
+                    order.timestamp = new Date().toISOString();
                     order.paymentMethod = input.paymentMethod;
-                    order.cashReceived = input.cashReceived;
-                    order.tableId = input.tableId;
+                    if (input.cashReceived !== undefined) {
+                        order.cashReceived = input.cashReceived;
+                    }
+                    if (input.tableId !== undefined) {
+                        order.tableId = input.tableId;
+                    }
                     // Tisch zuweisen, falls vorhanden
                     if (input.tableId) {
                         const tableRepository = database_1.AppDataSource.getRepository(entity_1.Table);
-                        const table = await tableRepository.findOne({ where: { id: input.tableId } });
+                        const table = await tableRepository.findOne({ where: { id: Number(input.tableId) } });
                         if (table) {
                             order.table = table;
                         }
@@ -111,8 +124,12 @@ exports.orderResolvers = {
         // Bestellstatus aktualisieren
         updateOrderStatus: async (_, { id, status }, context) => {
             try {
+                const where = { id };
+                if (context.user) {
+                    where.user = { id: context.user.id };
+                }
                 const order = await orderRepository.findOne({
-                    where: { id },
+                    where,
                     relations: ['items', 'user', 'table']
                 });
                 if (!order) {
@@ -130,9 +147,13 @@ exports.orderResolvers = {
         // Bestellung aktualisieren
         updateOrder: async (_, { id, input }, context) => {
             try {
+                const where = { id: Number(id) };
+                if (context.user) {
+                    where.user = { id: context.user.id };
+                }
                 // Bestellung finden
                 const order = await orderRepository.findOne({
-                    where: { id: Number(id) },
+                    where,
                     relations: ['items', 'user', 'table']
                 });
                 if (!order) {
@@ -159,13 +180,12 @@ exports.orderResolvers = {
                         order.tableId = input.tableId;
                         if (input.tableId) {
                             const tableRepository = database_1.AppDataSource.getRepository(entity_1.Table);
-                            const table = await tableRepository.findOne({ where: { id: input.tableId } });
+                            const table = await tableRepository.findOne({ where: { id: Number(input.tableId) } });
                             if (table) {
                                 order.table = table;
                             }
                         }
                         else {
-                            // Tisch-Referenz entfernen, mit leerem String
                             order.tableId = '';
                         }
                     }
