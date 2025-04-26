@@ -12,7 +12,7 @@ export const UserManagement: React.FC = () => {
   const [newUser, setNewUser] = useState({
     username: '',
     password: '',
-    role: 'user'
+    role: 'EMPLOYEE'
   });
   
   // Benutzer laden
@@ -57,7 +57,7 @@ export const UserManagement: React.FC = () => {
       
       if (createdUser) {
         setUsers([...users, createdUser]);
-        setNewUser({ username: '', password: '', role: 'user' });
+        setNewUser({ username: '', password: '', role: 'EMPLOYEE' });
         setSuccess(`Benutzer "${createdUser.username}" wurde erfolgreich erstellt!`);
         
         // Erfolgsmeldung für 5 Sekunden anzeigen
@@ -150,7 +150,7 @@ export const UserManagement: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                    user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
                   }`}>
                     {user.role}
                   </span>
@@ -204,8 +204,8 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option value="user">Benutzer</option>
-                <option value="admin">Administrator</option>
+                <option value="EMPLOYEE">Benutzer</option>
+                <option value="ADMIN">Administrator</option>
               </select>
             </div>
           </div>

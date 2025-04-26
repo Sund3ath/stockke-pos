@@ -94,7 +94,7 @@ async function startServer() {
     // Konfiguriere Express-Middleware
     app.use(
       '/graphql',
-      cors<cors.CorsRequest>(),
+      cors<cors.CorsRequest>({ origin: "https://pos.stockke.de", credentials: true }),
       json(),
       authMiddleware, // Authentifizierungs-Middleware hinzufügen
       expressMiddleware(server, {

@@ -3,7 +3,7 @@ import { setContext } from '@apollo/client/link/context';
 
 // HTTP-Link zum Backend-Server
 const httpLink = createHttpLink({
-  uri: 'http://localhost:4000/graphql',
+  uri: 'https://pos-api.stockke.de/graphql',
 });
 
 // Auth-Link für JWT-Token

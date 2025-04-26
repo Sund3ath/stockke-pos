@@ -5,13 +5,13 @@ import { apolloClient } from './apollo';
 export interface User {
   id: string;
   username: string;
-  role: string;
+  role: "ADMIN" | "EMPLOYEE";
 }
 
 export interface CreateUserInput {
   username: string;
   password: string;
-  role: string;
+  role: "ADMIN" | "EMPLOYEE";
 }
 
 // GraphQL-Dokumente

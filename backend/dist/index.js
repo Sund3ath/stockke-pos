@@ -84,7 +84,7 @@ async function startServer() {
         await server.start();
         console.log('Apollo-Server gestartet');
         // Konfiguriere Express-Middleware
-        app.use('/graphql', (0, cors_1.default)(), (0, body_parser_1.json)(), auth_middleware_1.authMiddleware, // Authentifizierungs-Middleware hinzufügen
+        app.use('/graphql', (0, cors_1.default)({ origin: "https://pos.stockke.de", credentials: true }), (0, body_parser_1.json)(), auth_middleware_1.authMiddleware, // Authentifizierungs-Middleware hinzufügen
         (0, express4_1.expressMiddleware)(server, {
             context: async ({ req }) => {
                 // Benutzerkontext an den Apollo-Server übergeben
