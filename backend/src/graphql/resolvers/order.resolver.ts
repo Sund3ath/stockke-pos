@@ -1,6 +1,9 @@
 import { AppDataSource } from '../../config/database';
 import { Order, OrderItem, User, Table } from '../../entity';
 import { FindOptionsWhere } from 'typeorm';
+import { ExternalOrder, OrderStatus } from '../../entity/ExternalOrder';
+import { DataSource } from 'typeorm';
+import { Product } from '../../entity/Product';
 
 // Repositories
 const orderRepository = AppDataSource.getRepository(Order);
@@ -37,6 +40,21 @@ interface UpdateOrderInput {
     price: number;
     taxRate: number;
   }>;
+}
+
+interface CreateExternalOrderInput {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+  }>;
+  total: number;
+  adminUserId: string;
+  customerNote?: string;
+}
+
+interface Context {
+  dataSource: DataSource;
 }
 
 export const orderResolvers = {
@@ -277,6 +295,75 @@ export const orderResolvers = {
       } catch (error) {
         console.error('Fehler beim Aktualisieren der Bestellung:', error);
         throw new Error('Fehler beim Aktualisieren der Bestellung');
+      }
+    },
+
+    createExternalOrder: async (
+      _: any,
+      { input }: { input: CreateExternalOrderInput },
+      { dataSource }: Context
+    ) => {
+      const orderRepository = dataSource.getRepository(ExternalOrder);
+      const orderItemRepository = dataSource.getRepository(OrderItem);
+      const productRepository = dataSource.getRepository(Product);
+
+      // Start a transaction
+      const queryRunner = dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        // Create the order
+        const order = orderRepository.create({
+          total: input.total,
+          status: OrderStatus.PENDING,
+          adminUserId: input.adminUserId,
+          customerNote: input.customerNote
+        });
+
+        // Save the order first to get the ID
+        const savedOrder = await queryRunner.manager.save(order);
+
+        // Fetch all products at once to get their names
+        const productIds = input.items.map(item => item.productId);
+        const products = await productRepository.findByIds(productIds);
+        
+        // Create product ID to name mapping
+        const productMap = products.reduce((acc, product) => {
+          acc[product.id] = product.name;
+          return acc;
+        }, {} as { [key: string]: string });
+
+        // Create and save order items
+        const orderItems = input.items.map(item => {
+          const productName = productMap[item.productId];
+          if (!productName) {
+            throw new Error(`Product with ID ${item.productId} not found`);
+          }
+
+          return orderItemRepository.create({
+            externalOrder: savedOrder,
+            productId: item.productId,
+            productName: productName,
+            quantity: item.quantity,
+            price: item.price,
+            taxRate: 19 // You might want to get this from the product as well
+          });
+        });
+
+        await queryRunner.manager.save(orderItems);
+        await queryRunner.commitTransaction();
+
+        // Fetch the complete order with items
+        return await orderRepository.findOne({
+          where: { id: savedOrder.id },
+          relations: ['items']
+        });
+      } catch (error) {
+        await queryRunner.rollbackTransaction();
+        throw error;
+      } finally {
+        await queryRunner.release();
       }
     }
   }

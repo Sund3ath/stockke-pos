@@ -5,10 +5,13 @@ type OrderItem {
   quantity: Int!
   price: Float!
   taxRate: Float!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type Order {
   id: ID!
+  products: [Product!]!
   items: [OrderItem!]!
   total: Float!
   status: String!
@@ -23,12 +26,28 @@ type Order {
   updatedAt: String!
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+type ExternalOrder {
+  id: ID!
+  items: [OrderItem!]!
+  total: Float!
+  status: OrderStatus!
+  createdAt: DateTime!
+  adminUserId: ID!
+  customerNote: String
+}
+
 input OrderItemInput {
-  productId: String!
-  productName: String!
+  productId: ID!
   quantity: Int!
   price: Float!
-  taxRate: Float!
+  taxRate: Float
 }
 
 input CreateOrderInput {
@@ -52,6 +71,13 @@ input UpdateOrderInput {
   tableId: String
 }
 
+input CreateExternalOrderInput {
+  items: [OrderItemInput!]!
+  total: Float!
+  adminUserId: ID!
+  customerNote: String
+}
+
 extend type Query {
   orders: [Order!]!
   order(id: ID!): Order
@@ -61,4 +87,5 @@ extend type Mutation {
   createOrder(input: CreateOrderInput!): Order!
   updateOrder(id: ID!, input: UpdateOrderInput!): Order!
   updateOrderStatus(id: ID!, status: String!): Order!
+  createExternalOrder(input: CreateExternalOrderInput!): ExternalOrder!
 }

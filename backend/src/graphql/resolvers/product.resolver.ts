@@ -5,101 +5,53 @@ import { Product, User, UserRole } from '../../entity';
 const productRepository = AppDataSource.getRepository(Product);
 const userRepository = AppDataSource.getRepository(User);
 
+// Add interface for resolver context
+interface ResolverContext {
+  user?: {
+    id: number;
+    username: string;
+    role: UserRole;
+  };
+  isPublicOperation?: boolean;
+}
+
 export const productResolvers = {
   Query: {
-    // Alle Produkte abrufen
-    products: async (_: any, __: any, context: any) => {
-      try {
-        if (!context.user) {
-          throw new Error('Nicht autorisiert');
-        }
-
-        // Admin sieht alle Produkte
-        if (context.user.role === UserRole.ADMIN) {
-          return await productRepository.find({
-            relations: ['adminUser']
-          });
-        }
-
-        // Mitarbeiter sieht nur die Produkte seines Parent-Users (Admin)
-        const employee = await userRepository.findOne({
-          where: { id: context.user.id },
-          relations: ['parentUser']
-        });
-
-        if (!employee || !employee.parentUser) {
-          throw new Error('Mitarbeiter ist keinem Admin zugeordnet');
-        }
-
-        // Produkte des Parent-Users laden
-        return await productRepository.find({
-          where: {
-            adminUser: {
-              id: employee.parentUser.id
-            }
-          },
-          relations: ['adminUser']
-        });
-      } catch (error) {
-        console.error('Fehler beim Abrufen der Produkte:', error);
-        throw new Error('Fehler beim Abrufen der Produkte');
-      }
+    products: async () => {
+      return await productRepository.find();
     },
-    
-    // Produkt nach ID abrufen
-    product: async (_: any, { id }: { id: number }, context: any) => {
+    product: async (_: any, { id }: { id: number }) => {
+      return await productRepository.findOne({ where: { id } });
+    },
+    productsByUserId: async (_: any, { userId }: { userId: number }) => {
       try {
-        if (!context.user) {
-          throw new Error('Nicht autorisiert');
-        }
-
-        // Admin kann alle Produkte sehen
-        if (context.user.role === UserRole.ADMIN) {
-          const product = await productRepository.findOne({
-            where: { id },
-            relations: ['adminUser']
-          });
-
-          if (!product) {
-            throw new Error('Produkt nicht gefunden');
-          }
-
-          return product;
-        }
-
-        // Mitarbeiter sieht nur die Produkte seines Parent-Users (Admin)
-        const employee = await userRepository.findOne({
-          where: { id: context.user.id },
-          relations: ['parentUser']
-        });
-
-        if (!employee || !employee.parentUser) {
-          throw new Error('Mitarbeiter ist keinem Admin zugeordnet');
-        }
-
-        // Produkt mit Prüfung auf Parent-User laden
-        const product = await productRepository.findOne({
+        const products = await productRepository.find({ 
           where: {
-            id,
-            adminUser: {
-              id: employee.parentUser.id
-            }
+            adminUser: { id: userId },
+            inStock: true 
           },
-          relations: ['adminUser']
+          relations: ['adminUser'],
+          order: {
+            category: 'ASC',
+            name: 'ASC'
+          }
         });
-
-        if (!product) {
-          throw new Error('Produkt nicht gefunden oder keine Berechtigung');
-        }
-
-        return product;
+        return products;
       } catch (error) {
-        console.error('Fehler beim Abrufen des Produkts:', error);
-        throw new Error('Fehler beim Abrufen des Produkts');
+        console.error('Error fetching products by user ID:', error);
+        throw new Error('Failed to fetch products');
       }
     }
   },
+  Product: {
+    adminUser: async (parent: Product) => {
+      if (parent.adminUser) return parent.adminUser;
   
+      return await userRepository.findOne({ 
+        where: { id: parent.adminUserId }
+      });
+    }
+  },
   Mutation: {
     // Neues Produkt erstellen
     createProduct: async (_: any, { input }: any, context: any) => {

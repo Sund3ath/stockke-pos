@@ -1,0 +1,57 @@
+type Query {
+  products: [Product!]!
+  product(id: ID!): Product
+  productsByUserId(userId: ID!): [Product!]!
+}
+
+enum ProductCategory {
+  mains
+  sides
+  drinks
+}
+
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  category: ProductCategory!
+  image: String
+  description: String
+  inStock: Boolean!
+  taxRate: Float!
+  adminUser: User!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateProductInput {
+  name: String!
+  price: Float!
+  category: ProductCategory!
+  image: String
+  description: String
+  inStock: Boolean = true
+  taxRate: Float = 19.0
+}
+
+input UpdateProductInput {
+  name: String
+  price: Float
+  category: ProductCategory
+  image: String
+  description: String
+  inStock: Boolean
+  taxRate: Float
+}
+
+extend type Mutation {
+  createProduct(input: CreateProductInput!): Product!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  deleteProduct(id: ID!): Boolean!
+}
+
+# If User type is defined elsewhere, remove this
+type User {
+  id: ID!
+  username: String!
+} 

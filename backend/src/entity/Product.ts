@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './User';
 
 @Entity('products')
@@ -27,7 +27,11 @@ export class Product {
   @Column('decimal', { precision: 5, scale: 2, default: 19.0 })
   taxRate: number;
 
-  @ManyToOne(() => User, { nullable: false })
+  @Column()
+  adminUserId: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'adminUserId' })
   adminUser: User;
 
   @CreateDateColumn()

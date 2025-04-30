@@ -7,6 +7,7 @@ export interface Product {
   description?: string;
   inStock: boolean;
   taxRate: 7 | 19;
+  featured?: boolean;
 }
 
 export interface TaxSettings {

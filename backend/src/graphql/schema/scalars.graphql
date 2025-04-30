@@ -1,0 +1,10 @@
+scalar DateTime
+
+# If you don't have a base schema file, create one:
+type Query {
+  _empty: String
+}
+
+type Mutation {
+  _empty: String
+} 

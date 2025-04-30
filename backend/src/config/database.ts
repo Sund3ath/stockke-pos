@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import path from 'path';
 import dotenv from 'dotenv';
+import { ExternalOrder } from '../entity/ExternalOrder';
 
 // Lade Umgebungsvariablen aus .env-Datei
 dotenv.config();
@@ -15,8 +16,8 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_DATABASE || 'stockke_pos',
   synchronize: true, // Temporär aktivieren, um die Änderungen zu synchronisieren
   logging: process.env.NODE_ENV !== 'production',
-  entities: [path.join(__dirname, '../entity/**/*.{js,ts}')],
-  migrations: [path.join(__dirname, '../migrations/**/*.{js,ts}')],
-  subscribers: [path.join(__dirname, '../subscriber/**/*.{js,ts}')],
+  entities: [path.join(process.cwd(), 'src/entity/**/*.{js,ts}'), ExternalOrder],
+  migrations: [path.join(process.cwd(), 'src/migrations/**/*.{js,ts}')],
+  subscribers: [path.join(process.cwd(), 'src/subscriber/**/*.{js,ts}')],
   charset: 'utf8mb4_unicode_ci',
 });

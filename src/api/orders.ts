@@ -173,6 +173,36 @@ const GET_DAILY_SALES = gql`
   }
 `;
 
+export const CREATE_EXTERNAL_ORDER = gql`
+  mutation CreateExternalOrder($input: CreateExternalOrderInput!) {
+    createExternalOrder(input: $input) {
+      id
+      total
+      status
+      createdAt
+      customerNote
+    }
+  }
+`;
+
+export const GET_EXTERNAL_ORDERS_BY_USER_ID = gql`
+  query GetExternalOrdersByUserId($userId: ID!) {
+    externalOrdersByUserId(userId: $userId) {
+      id
+      total
+      status
+      createdAt
+      customerNote
+      items {
+        id
+        productName
+        quantity
+        price
+      }
+    }
+  }
+`;
+
 interface OrdersQueryResult {
   orders: ApiOrder[];
 }
@@ -300,5 +330,32 @@ export const fetchDailySales = async (date: string) => {
   } catch (error) {
     console.error('Error fetching daily sales:', error);
     return null;
+  }
+};
+
+export const createExternalOrder = async (input: CreateExternalOrderInput) => {
+  try {
+    const { data } = await apolloClient.mutate({
+      mutation: CREATE_EXTERNAL_ORDER,
+      variables: { input }
+    });
+    return data.createExternalOrder;
+  } catch (error) {
+    console.error('Error creating external order:', error);
+    throw error;
+  }
+};
+
+export const getExternalOrdersByUserId = async (userId: string) => {
+  try {
+    const { data } = await apolloClient.query({
+      query: GET_EXTERNAL_ORDERS_BY_USER_ID,
+      variables: { userId },
+      fetchPolicy: 'network-only' // Don't use cache for this query
+    });
+    return data.externalOrdersByUserId;
+  } catch (error) {
+    console.error('Error fetching external orders:', error);
+    return [];
   }
 };

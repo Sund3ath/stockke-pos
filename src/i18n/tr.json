@@ -1,0 +1,51 @@
+{
+  "errors": {
+    "failedToLoadProducts": "Ürünler yüklenemedi",
+    "failedToCreateOrder": "Sipariş oluşturulamadı. Lütfen tekrar deneyin."
+  },
+  "externalOrder": {
+    "title": "Menü",
+    "noProducts": "Ürün bulunmamaktadır",
+    "cart": "Sepet",
+    "orderNow": "Şimdi Sipariş Ver"
+  },
+  "categories": {
+    "mains": "Ana Yemekler",
+    "sides": "Yan Yemekler",
+    "drinks": "İçecekler",
+    "uncategorized": "Diğer Ürünler"
+  },
+  "cart": {
+    "title": "Sepetiniz",
+    "empty": "Sepetiniz boş",
+    "total": "Toplam",
+    "checkout": "Ödemeye Geç"
+  },
+  "actions": {
+    "addToCart": "Sepete Ekle",
+    "remove": "Çıkar",
+    "add": "Ekle"
+  },
+  "order": {
+    "successMessage": "Sipariş başarıyla oluşturuldu!"
+  },
+  "cookiesRequired": "Sipariş vermek için çerezler gereklidir. Lütfen çerezleri etkinleştirin veya gizli tarama modunu devre dışı bırakın.",
+  "cookies": {
+    "consentTitle": "Çerez İzni",
+    "consentMessage": "Bu web sitesi, alışveriş deneyiminizi geliştirmek ve sepetinizi kaydetmek için çerezler kullanır. Çerezleri kabul ediyor musunuz?",
+    "accept": "Çerezleri Kabul Et",
+    "decline": "Reddet",
+    "required": "Sipariş vermek için çerezler gereklidir. Lütfen çerezleri etkinleştirin veya gizli tarama modunu devre dışı bırakın."
+  },
+  "orderHistory": {
+    "title": "Sipariş Geçmişi",
+    "noOrders": "Önceki sipariş bulunmuyor",
+    "note": "Not"
+  },
+  "orderStatus": {
+    "pending": "Beklemede",
+    "confirmed": "Onaylandı",
+    "completed": "Tamamlandı",
+    "cancelled": "İptal Edildi"
+  }
+} 

@@ -1,0 +1,51 @@
+{
+  "errors": {
+    "failedToLoadProducts": "Fehler beim Laden der Produkte",
+    "failedToCreateOrder": "Bestellung konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+  },
+  "externalOrder": {
+    "title": "Speisekarte",
+    "noProducts": "Keine Produkte verfügbar",
+    "cart": "Warenkorb",
+    "orderNow": "Jetzt bestellen"
+  },
+  "categories": {
+    "mains": "Hauptgerichte",
+    "sides": "Beilagen",
+    "drinks": "Getränke",
+    "uncategorized": "Sonstige Artikel"
+  },
+  "cart": {
+    "title": "Ihr Warenkorb",
+    "empty": "Ihr Warenkorb ist leer",
+    "total": "Gesamt",
+    "checkout": "Zur Kasse"
+  },
+  "actions": {
+    "addToCart": "In den Warenkorb",
+    "remove": "Entfernen",
+    "add": "Hinzufügen"
+  },
+  "order": {
+    "successMessage": "Bestellung erfolgreich aufgegeben!"
+  },
+  "cookiesRequired": "Cookies sind erforderlich, um Bestellungen aufzugeben. Bitte aktivieren Sie Cookies oder deaktivieren Sie den privaten Browsing-Modus.",
+  "cookies": {
+    "consentTitle": "Cookie-Zustimmung",
+    "consentMessage": "Diese Website verwendet Cookies, um Ihr Einkaufserlebnis zu verbessern und Ihren Warenkorb zu speichern. Akzeptieren Sie Cookies?",
+    "accept": "Cookies akzeptieren",
+    "decline": "Ablehnen",
+    "required": "Cookies sind erforderlich, um Bestellungen aufzugeben. Bitte aktivieren Sie Cookies oder deaktivieren Sie den privaten Browsing-Modus."
+  },
+  "orderHistory": {
+    "title": "Bestellverlauf",
+    "noOrders": "Keine vorherigen Bestellungen",
+    "note": "Notiz"
+  },
+  "orderStatus": {
+    "pending": "Ausstehend",
+    "confirmed": "Bestätigt",
+    "completed": "Abgeschlossen",
+    "cancelled": "Storniert"
+  }
+} 

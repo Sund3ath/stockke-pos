@@ -1,0 +1,22 @@
+type Query {
+  # ... other queries ...
+  
+  # Public query - no authentication required
+  productsByUserId(userId: ID!): [Product!]!
+  
+  # ... other queries ...
+}
+
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  category: ProductCategory!
+  image: String
+  description: String
+  inStock: Boolean!
+  taxRate: Float!
+  adminUser: User!
+}
+
+# ... rest of schema ... 

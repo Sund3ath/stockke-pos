@@ -1,5 +1,6 @@
 import { gql, useQuery, useMutation } from '@apollo/client';
 import { Product } from '../types';
+import { apolloClient } from './apollo';
 
 // GraphQL-Typen
 export interface ProductsResponse {
@@ -53,6 +54,25 @@ export const GET_PRODUCTS = gql`
 export const GET_PRODUCT = gql`
   query GetProduct($id: ID!) {
     product(id: $id) {
+      id
+      name
+      price
+      category
+      image
+      description
+      inStock
+      taxRate
+      adminUser {
+        id
+        username
+      }
+    }
+  }
+`;
+
+export const GET_PRODUCTS_BY_USER_ID = gql`
+  query GetProductsByUserId($userId: ID!) {
+    productsByUserId(userId: $userId) {
       id
       name
       price
@@ -220,4 +240,21 @@ export const useDeleteProduct = () => {
     loading,
     error
   };
+};
+
+interface ProductsByUserIdResponse {
+  productsByUserId: Product[];
+}
+
+export const getProductsByUserId = async (userId: string): Promise<Product[]> => {
+  try {
+    const { data } = await apolloClient.query<ProductsByUserIdResponse>({
+      query: GET_PRODUCTS_BY_USER_ID,
+      variables: { userId }
+    });
+    return data.productsByUserId;
+  } catch (error) {
+    console.error('Error fetching products by user ID:', error);
+    return [];
+  }
 };

@@ -1,0 +1,21 @@
+type Query {
+  # Existing queries...
+  products: [Product!]!
+  product(id: ID!): Product
+  # Add our new public query
+  productsByUserId(userId: ID!): [Product!]!
+}
+
+type Product {
+  id: ID!
+  name: String!
+  price: Float!
+  category: ProductCategory!
+  image: String
+  description: String
+  inStock: Boolean!
+  taxRate: Float!
+  adminUser: User!
+}
+
+# ... rest of schema 

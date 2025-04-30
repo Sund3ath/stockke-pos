@@ -1,0 +1,51 @@
+{
+  "errors": {
+    "failedToLoadProducts": "Failed to load products",
+    "failedToCreateOrder": "Failed to create order. Please try again."
+  },
+  "externalOrder": {
+    "title": "Menu",
+    "noProducts": "No products available",
+    "cart": "Cart",
+    "orderNow": "Order Now"
+  },
+  "categories": {
+    "mains": "Main Dishes",
+    "sides": "Side Dishes",
+    "drinks": "Beverages",
+    "uncategorized": "Other Items"
+  },
+  "cart": {
+    "title": "Your Cart",
+    "empty": "Your cart is empty",
+    "total": "Total",
+    "checkout": "Checkout"
+  },
+  "actions": {
+    "addToCart": "Add to Cart",
+    "remove": "Remove",
+    "add": "Add"
+  },
+  "order": {
+    "successMessage": "Order placed successfully!"
+  },
+  "cookiesRequired": "Cookies are required to place orders. Please enable cookies or disable private browsing mode.",
+  "cookies": {
+    "consentTitle": "Cookie Consent",
+    "consentMessage": "This website uses cookies to enhance your shopping experience and save your cart. Do you accept cookies?",
+    "accept": "Accept Cookies",
+    "decline": "Decline",
+    "required": "Cookies are required to place orders. Please enable cookies or disable private browsing mode."
+  },
+  "orderHistory": {
+    "title": "Order History",
+    "noOrders": "No previous orders",
+    "note": "Note"
+  },
+  "orderStatus": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  }
+} 

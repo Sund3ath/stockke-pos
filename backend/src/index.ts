@@ -17,6 +17,12 @@ import { settingsResolver } from './graphql/resolvers/settings.resolver';
 import { dailySalesResolver } from './graphql/resolvers/dailySales.resolver';
 import fs from 'fs';
 import path from 'path';
+import { loadFilesSync } from '@graphql-tools/load-files';
+import { mergeTypeDefs } from '@graphql-tools/merge';
+import { Context } from './types/context';
+
+// Add this for __dirname support
+declare const __dirname: string;
 
 // Lade Umgebungsvariablen
 dotenv.config();
@@ -28,31 +34,9 @@ const PORT = process.env.PORT || 4000;
 const app = express();
 const httpServer = http.createServer(app);
 
-// Lade die GraphQL-Schemas
-const loadSchemas = () => {
-  const schemaPath = path.join(__dirname, 'graphql/schema');
-  const schemaFiles = fs.readdirSync(schemaPath).filter(file => file.endsWith('.graphql'));
-  
-  let typeDefs = `#graphql
-    type Query {
-      _empty: String
-    }
-    
-    type Mutation {
-      _empty: String
-    }
-  `;
-  
-  for (const file of schemaFiles) {
-    const schema = fs.readFileSync(path.join(schemaPath, file), 'utf8');
-    typeDefs += '\n' + schema;
-  }
-  
-  return typeDefs;
-};
-
-// Lade die GraphQL-Schemas
-const typeDefs = loadSchemas();
+// Load all GraphQL schema files
+const typesArray = loadFilesSync(path.join(process.cwd(), 'src/graphql/schema/**/*.graphql'));
+const typeDefs = mergeTypeDefs(typesArray);
 
 // Kombiniere alle Resolver
 const resolvers = {
@@ -74,40 +58,63 @@ const resolvers = {
 };
 
 // Erstelle den Apollo-Server
-const server = new ApolloServer({
+const server = new ApolloServer<Context>({
   typeDefs,
   resolvers,
   plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
 });
+
+// Add this function to check if operation is public
+const isPublicOperation = (req: express.Request) => {
+  const operationName = req.body?.operationName;
+  return operationName === 'GetProductsByUserId';
+};
 
 // Starte die Anwendung
 async function startServer() {
   try {
     // Initialisiere die Datenbankverbindung
     await AppDataSource.initialize();
-    console.log('Datenbankverbindung hergestellt');
+    console.log('Database connection established');
 
     // Starte den Apollo-Server
     await server.start();
-    console.log('Apollo-Server gestartet');
+    console.log('Apollo Server started');
 
     // Konfiguriere Express-Middleware
     app.use(
       '/graphql',
-      cors<cors.CorsRequest>({ origin: "https://pos.stockke.de", credentials: true }),
+      cors<cors.CorsRequest>({ 
+        origin: ["https://pos.stockke.de", "http://localhost:5173"],
+        credentials: true 
+      }),
       json(),
-      authMiddleware, // Authentifizierungs-Middleware hinzufügen
+      // Modify auth middleware to skip for public operations
+      (req, res, next) => {
+        if (isPublicOperation(req)) {
+          return next();
+        }
+        return authMiddleware(req, res, next);
+      },
       expressMiddleware(server, {
-        context: async ({ req }) => {
-          // Benutzerkontext an den Apollo-Server übergeben
+        context: async ({ req }): Promise<Context> => {
+          if (isPublicOperation(req)) {
+            return { 
+              dataSource: AppDataSource,
+              isPublicOperation: true,
+              user: null
+            };
+          }
           const authReq = req as AuthRequest;
           return {
+            dataSource: AppDataSource,
             user: authReq.user ? {
               id: authReq.user.id,
               username: authReq.user.username,
               role: authReq.user.role,
               parentUser: authReq.user.parentUser
-            } : null
+            } : null,
+            isPublicOperation: false
           };
         }
       }),
@@ -115,9 +122,10 @@ async function startServer() {
 
     // Starte den HTTP-Server
     await new Promise<void>((resolve) => httpServer.listen({ port: PORT }, resolve));
-    console.log(`🚀 Server bereit unter http://localhost:${PORT}/graphql`);
+    console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
   } catch (error) {
-    console.error('Fehler beim Starten des Servers:', error);
+    console.error('Error starting server:', error);
+    process.exit(1);
   }
 }
 
