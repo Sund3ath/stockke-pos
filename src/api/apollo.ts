@@ -1,7 +1,6 @@
 import { ApolloClient, InMemoryCache, split, createHttpLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
-import { createClient } from 'graphql-ws';
+import { WebSocketLink } from '@apollo/client/link/ws';
 import { setContext } from '@apollo/client/link/context';
 
 // HTTP-Link zum Backend-Server
@@ -10,12 +9,23 @@ const httpLink = createHttpLink({
   credentials: 'include'
 });
 
-const wsLink = new GraphQLWsLink(createClient({
-  url: 'ws://localhost:4000/graphql',
-  connectionParams: {
-    authorization: localStorage.getItem('token') ? `Bearer ${localStorage.getItem('token')}` : ''
+// Create WebSocket link
+const wsLink = new WebSocketLink({
+  uri: 'ws://localhost:4000/graphql',
+  options: {
+    reconnect: true,
+    lazy: true,
+    reconnectionAttempts: 5,
+    connectionParams: () => {
+      const token = localStorage.getItem('token');
+      return {
+        authorization: token ? `Bearer ${token}` : ''
+      };
+    },
+    timeout: 30000,
+    inactivityTimeout: 30000
   }
-}));
+});
 
 // Auth-Link für JWT-Token
 const authLink = setContext((_, { headers }) => {

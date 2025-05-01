@@ -20,6 +20,10 @@ import { loadFilesSync } from '@graphql-tools/load-files';
 import { mergeTypeDefs } from '@graphql-tools/merge';
 import jwt from 'jsonwebtoken';
 import { User } from './entity/User';
+import { createPubSub } from 'graphql-yoga';
+import { WebSocketServer } from 'ws';
+import { SubscriptionServer } from 'subscriptions-transport-ws';
+import { execute, subscribe } from 'graphql';
 
 // Add this for __dirname support
 declare const __dirname: string;
@@ -57,9 +61,44 @@ const resolvers = {
 // Create schema
 const schema = makeExecutableSchema({ typeDefs, resolvers });
 
+// Create pubsub instance
+const pubsub = createPubSub();
+
 // Create HTTP server
 const app = express();
 const httpServer = createServer(app);
+
+// Configure CORS
+app.use(cors({
+  origin: ["https://pos.stockke.de", "http://localhost:5173"],
+  credentials: true
+}));
+
+// Create WebSocket server
+const wsServer = new WebSocketServer({
+  server: httpServer,
+  path: '/graphql',
+  perMessageDeflate: {
+    zlibDeflateOptions: {
+      chunkSize: 1024,
+      memLevel: 7,
+      level: 3
+    },
+    zlibInflateOptions: {
+      chunkSize: 10 * 1024
+    },
+    clientNoContextTakeover: true,
+    serverNoContextTakeover: true,
+    serverMaxWindowBits: 10,
+    concurrencyLimit: 10,
+    threshold: 1024
+  }
+});
+
+// Add error handling for WebSocket server
+wsServer.on('error', (error: Error) => {
+  console.error('WebSocket server error:', error);
+});
 
 // Create GraphQL Yoga server options
 const yoga = createYoga({
@@ -70,7 +109,7 @@ const yoga = createYoga({
       
       if (!token) {
         console.log('No token provided');
-        return { user: null, dataSource: AppDataSource };
+        return { user: null, dataSource: AppDataSource, pubsub };
       }
 
       const secret = process.env.JWT_SECRET || 'stockke_pos_very_secure_secret_key_change_in_production';
@@ -84,50 +123,72 @@ const yoga = createYoga({
 
       if (!user) {
         console.log('User not found');
-        return { user: null, dataSource: AppDataSource };
+        return { user: null, dataSource: AppDataSource, pubsub };
       }
 
       console.log('User authenticated:', user.id);
-      return { user, dataSource: AppDataSource };
+      return { user, dataSource: AppDataSource, pubsub };
     } catch (error) {
       console.error('Error in context:', error);
-      return { user: null, dataSource: AppDataSource };
+      return { user: null, dataSource: AppDataSource, pubsub };
     }
-  }
+  },
 });
 
-// Add this function to check if operation is public
-const isPublicOperation = (req: Request) => {
-  const operationName = req.body?.operationName;
-  return operationName === 'GetProductsByUserId';
-};
+// Mount the Yoga middleware
+app.use('/graphql', yoga);
 
-// Starte die Anwendung
+// Set up WebSocket server
+SubscriptionServer.create(
+  {
+    schema,
+    execute,
+    subscribe,
+    onConnect: async (connectionParams: any) => {
+      try {
+        const token = connectionParams?.authorization?.split(' ')[1];
+        
+        if (!token) {
+          console.log('No token provided in WebSocket connection');
+          return { user: null, dataSource: AppDataSource, pubsub };
+        }
+
+        const secret = process.env.JWT_SECRET || 'stockke_pos_very_secure_secret_key_change_in_production';
+        const decoded = jwt.verify(token, secret) as { id: number };
+        
+        const userRepository = AppDataSource.getRepository(User);
+        const user = await userRepository.findOne({ 
+          where: { id: decoded.id },
+          relations: ['parentUser']
+        });
+
+        if (!user) {
+          console.log('User not found in WebSocket connection');
+          return { user: null, dataSource: AppDataSource, pubsub };
+        }
+
+        console.log('WebSocket user authenticated:', user.id);
+        return { user, dataSource: AppDataSource, pubsub };
+      } catch (error) {
+        console.error('Error in WebSocket context:', error);
+        return { user: null, dataSource: AppDataSource, pubsub };
+      }
+    },
+    onDisconnect: () => {
+      console.log('Client disconnected');
+    }
+  },
+  wsServer
+);
+
+// Start the server
 async function startServer() {
   try {
-    // Initialisiere die Datenbankverbindung
+    // Initialize database connection
     await AppDataSource.initialize();
     console.log('Database connection established');
 
-    // Configure Express middleware
-    app.use(cors({
-      origin: ["https://pos.stockke.de", "http://localhost:5173"],
-      credentials: true
-    }));
-    app.use(json());
-    
-    // Auth middleware
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      if (isPublicOperation(req)) {
-        return next();
-      }
-      return authMiddleware(req, res, next);
-    });
-
-    // Mount the Yoga middleware
-    app.use('/graphql', yoga);
-
-    // Starte den HTTP-Server
+    // Start the HTTP server
     await new Promise<void>((resolve) => httpServer.listen({ port: PORT }, resolve));
     console.log(`🚀 Server ready at http://localhost:${PORT}/graphql`);
     console.log(`🚀 WebSocket server ready at ws://localhost:${PORT}/graphql`);
@@ -137,5 +198,4 @@ async function startServer() {
   }
 }
 
-// Starte den Server
 startServer();

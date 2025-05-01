@@ -4,7 +4,6 @@ import { FindOptionsWhere } from 'typeorm';
 import { ExternalOrder, OrderStatus } from '../../entity/ExternalOrder';
 import { DataSource } from 'typeorm';
 import { Product } from '../../entity/Product';
-import { PubSub } from 'graphql-subscriptions';
 import { withFilter } from 'graphql-subscriptions';
 
 // Repositories
@@ -63,6 +62,7 @@ interface CreateExternalOrderInput {
 
 interface Context {
   dataSource: DataSource;
+  pubsub: any;
 }
 
 interface ExternalOrderEvent {
@@ -72,8 +72,6 @@ interface ExternalOrderEvent {
 type PubSubEvent = {
   [key: string]: any;
 };
-
-const pubsub = new PubSub();
 
 export const orderResolvers = {
   Query: {
@@ -377,7 +375,7 @@ export const orderResolvers = {
       }
     },
 
-    createExternalOrder: async (_: any, { input }: { input: CreateExternalOrderInput }, { dataSource }: Context) => {
+    createExternalOrder: async (_: any, { input }: { input: CreateExternalOrderInput }, { dataSource, pubsub }: Context) => {
       try {
         const orderRepository = dataSource.getRepository(Order);
         const productRepository = dataSource.getRepository(Product);
@@ -456,9 +454,11 @@ export const orderResolvers = {
         const savedExternalOrder = await externalOrderRepository.save(externalOrder);
 
         // Publish the new external order
+        console.log('Publishing new external order event:', savedExternalOrder);
         await pubsub.publish(EXTERNAL_ORDER_CREATED, {
           externalOrderCreated: savedExternalOrder
         });
+        console.log('External order event published successfully');
 
         return savedExternalOrder;
       } catch (error) {
@@ -505,9 +505,10 @@ export const orderResolvers = {
   },
   Subscription: {
     externalOrderCreated: {
-      subscribe: () => {
+      subscribe: (_: any, __: any, { pubsub }: Context) => {
         try {
-          return (pubsub as any).asyncIterator(EXTERNAL_ORDER_CREATED);
+          console.log('New subscription established for externalOrderCreated');
+          return pubsub.subscribe(EXTERNAL_ORDER_CREATED);
         } catch (error) {
           console.error('Error setting up subscription:', error);
           throw error;
