@@ -21,11 +21,11 @@ const resources = {
 
 // Get initial language from store
 const store = useStore.getState();
-const initialLanguage = store.settings.language;
+const initialLanguage = store.settings.language || 'de';
 
 i18n
-  .use(LanguageDetector)
   .use(initReactI18next)
+  .use(LanguageDetector)
   .init({
     resources,
     lng: initialLanguage,
@@ -33,6 +33,11 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    debug: true, // Enable debug mode to see what's happening
+    react: {
+      useSuspense: false // Disable suspense mode
+    },
+    initImmediate: false // Force synchronous initialization
   });
 
 // Subscribe to language changes from the store

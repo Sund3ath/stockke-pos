@@ -47,5 +47,9 @@
     "confirmed": "Bestätigt",
     "completed": "Abgeschlossen",
     "cancelled": "Storniert"
+  },
+  "externalOrders": {
+    "title": "Externe Bestellungen",
+    "noOrders": "Keine externen Bestellungen verfügbar"
   }
 } 

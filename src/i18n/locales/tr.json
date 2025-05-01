@@ -68,6 +68,8 @@
     "tableNumber": "Masa {{number}}",
     "pickup": "Paket Servis",
     "parkOrder": "Siparişi Park Et & Kapat",
+    "pay": "Öde",
+    "receipts": "Fişler",
     "text": "Metin",
     "inOut": "İç/Dış",
     "searchProducts": "Ürün ara...",
@@ -88,7 +90,8 @@
     "noteAdded": "Not başarıyla eklendi",
     "noteUpdated": "Not başarıyla güncellendi",
     "noteDeleted": "Not başarıyla silindi",
-    "clickToAddNote": "Not eklemek için tıklayın"
+    "clickToAddNote": "Not eklemek için tıklayın",
+    "confirmUnsavedChanges": "Kaydedilmemiş değişiklikler var. Devam etmek istiyor musunuz?"
   },
   "orders": {
     "status": {
@@ -108,7 +111,9 @@
     "vat": "KDV",
     "net": "Net",
     "takeaway": "Paket Servis",
-    "delivery": "Teslimat"
+    "delivery": "Teslimat",
+    "complete": "Tamamla",
+    "cancel": "İptal Et"
   },
   "dashboard": {
     "totalSales": "Toplam Satış",
@@ -217,5 +222,15 @@
     "customerType": "Müşteri Tipi",
     "individual": "Bireysel",
     "business": "Kurumsal"
+  },
+  "orderStatus": {
+    "pending": "Beklemede",
+    "confirmed": "Onaylandı",
+    "completed": "Tamamlandı",
+    "cancelled": "İptal Edildi"
+  },
+  "externalOrders": {
+    "title": "Harici Siparişler",
+    "noOrders": "Harici sipariş bulunmuyor"
   }
 } 

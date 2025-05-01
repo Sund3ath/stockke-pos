@@ -7,8 +7,11 @@ export const TableSelector: React.FC = () => {
   const { t } = useTranslation();
   const { tables, selectedTable, selectTable } = useStore();
 
+  // Determine if we're in the mobile view based on screen width
+  const isMobile = window.innerWidth < 768;
+
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+    <div className={`grid ${isMobile ? 'grid-cols-3 gap-3' : 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-1 md:gap-2'}`}>
       {/* Pickup Option */}
       <button
         onClick={async () => {
@@ -18,14 +21,16 @@ export const TableSelector: React.FC = () => {
             console.error('Fehler beim Auswählen des Abholmodus:', error);
           }
         }}
-        className={`h-16 flex flex-col items-center justify-center rounded-lg text-center transition-all
+        className={`${isMobile ? 'h-20' : 'h-12 md:h-16'} flex flex-col items-center justify-center rounded-lg text-center transition-all
           ${selectedTable?.id === 'pickup'
             ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-500'
             : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
           }`}
       >
-        <ShoppingBag size={16} className="mb-1" />
-        <div className="text-xs font-medium">{t('pos.pickup')}</div>
+        <ShoppingBag size={isMobile ? 18 : 12} className={isMobile ? 'mb-1' : 'mb-0.5 md:mb-1 md:w-4 md:h-4'} />
+        <div className={isMobile ? 'text-sm font-medium' : 'text-[10px] md:text-xs font-medium'}>
+          {t('pos.pickup')}
+        </div>
       </button>
 
       {/* Table Cards */}
@@ -39,7 +44,7 @@ export const TableSelector: React.FC = () => {
               console.error(`Fehler beim Auswählen des Tisches ${table.id}:`, error);
             }
           }}
-          className={`h-16 flex flex-col items-center justify-center rounded-lg text-center transition-all
+          className={`${isMobile ? 'h-20' : 'h-12 md:h-16'} flex flex-col items-center justify-center rounded-lg text-center transition-all
             ${table.occupied
               ? 'bg-red-100 text-red-800'
               : table.id === selectedTable?.id
@@ -47,9 +52,11 @@ export const TableSelector: React.FC = () => {
               : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
             }`}
         >
-          <div className="text-xs font-medium">{t('pos.tableNumber', { number: table.name })}</div>
+          <div className={isMobile ? 'text-sm font-medium' : 'text-[10px] md:text-xs font-medium'}>
+            {t('pos.tableNumber', { number: table.name })}
+          </div>
           {table.occupied && (
-            <div className="text-xs mt-0.5">
+            <div className={isMobile ? 'text-sm mt-1' : 'text-[10px] md:text-xs mt-0.5'}>
               €{table.currentOrder?.total.toFixed(2) || '0.00'}
             </div>
           )}

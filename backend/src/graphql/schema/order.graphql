@@ -81,6 +81,7 @@ input CreateExternalOrderInput {
 extend type Query {
   orders: [Order!]!
   order(id: ID!): Order
+  externalOrdersByUserId(userId: ID!): [ExternalOrder!]!
 }
 
 extend type Mutation {
@@ -88,4 +89,5 @@ extend type Mutation {
   updateOrder(id: ID!, input: UpdateOrderInput!): Order!
   updateOrderStatus(id: ID!, status: String!): Order!
   createExternalOrder(input: CreateExternalOrderInput!): ExternalOrder!
+  updateExternalOrderStatus(id: ID!, status: OrderStatus!): ExternalOrder!
 }

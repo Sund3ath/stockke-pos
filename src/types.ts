@@ -81,10 +81,12 @@ export interface Order {
     product: Product;
     quantity: number;
     note?: string;
+    externalOrderId?: string;
   }>;
   total: number;
   status: 'pending' | 'completed' | 'cancelled' | 'parked';
   timestamp: string;
+  createdAt?: string;
   paymentMethod: 'cash' | 'card';
   cashReceived?: number;
   tseSignature?: string;

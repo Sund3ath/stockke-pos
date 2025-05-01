@@ -59,6 +59,58 @@ interface CookieOrder {
   customerNote?: string;
 }
 
+// Add this constant at the top of the file
+const CARD_STYLES = {
+  card: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    boxShadow: 2,
+    borderRadius: 2,
+    '&:hover': { 
+      transform: 'translateY(-4px)', 
+      boxShadow: 4 
+    },
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    overflow: 'hidden',
+    bgcolor: 'white'
+  },
+  mediaContainer: {
+    position: 'relative',
+    paddingTop: '56.25%', // 16:9 aspect ratio
+    backgroundColor: '#f5f5f5'
+  },
+  media: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover'
+  },
+  content: {
+    flex: 1,
+    p: 2
+  },
+  priceAction: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    mt: 2
+  },
+  recommendedBadge: {
+    position: 'absolute',
+    top: 16,
+    left: -8,
+    bgcolor: 'error.main',
+    color: 'white',
+    py: 0.5,
+    px: 2,
+    clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 10% 50%)',
+    zIndex: 1
+  }
+};
+
 const ExternalOrder: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const [products, setProducts] = useState<Product[]>([]);
@@ -66,7 +118,7 @@ const ExternalOrder: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +133,13 @@ const ExternalOrder: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
+
+  // Force German language on component mount
+  useEffect(() => {
+    if (i18n.language !== 'de') {
+      i18n.changeLanguage('de');
+    }
+  }, [i18n]);
 
   // Group products by category for sidebar navigation and display
   const groupedProducts = products.reduce((acc, product) => {
@@ -307,9 +366,11 @@ const ExternalOrder: React.FC = () => {
         };
       });
 
+      console.log('Original orderItems:', orderItems);
+      
       const total = calculateTotal();
       
-      // Create a new order object
+      // Create a new order object for cookies
       const newOrder: CookieOrder = {
         id: `local-${Date.now()}`,
         items: orderItems,
@@ -322,24 +383,40 @@ const ExternalOrder: React.FC = () => {
       // Save the order to cookies
       saveOrderToCookies(newOrder);
       
-      setOrderSuccess(true);
-      setCart({}); // Clear cart
-      setIsCartOpen(false);
-      
       // Also try to create an external order in the background if possible
-      // This will fail silently if there's no authentication
       try {
+        // Create a new array without productName for GraphQL
+        const externalOrderItems = Object.entries(cart).map(([productId, quantity]) => {
+          const product = products.find(p => p.id === productId);
+          if (!product) throw new Error('Product not found');
+          
+          return {
+            productId,
+            quantity,
+            price: product.price,
+            taxRate: product.taxRate || 19
+          };
+        });
+        
+        console.log('ExternalOrderItems:', externalOrderItems);
+        
         const input = {
-          items: orderItems,
+          items: externalOrderItems,
           total,
           adminUserId: userId!,
           customerNote: ''
         };
         
+        console.log('Final input for createExternalOrder:', JSON.stringify(input));
+        
         await createExternalOrder(input);
       } catch (error) {
-        console.log('Could not save order to server (expected if not authenticated)');
+        console.error('Detailed error in createExternalOrder:', error);
       }
+      
+      setOrderSuccess(true);
+      setCart({});
+      setIsCartOpen(false);
     } catch (error) {
       console.error('Error creating order:', error);
       setOrderError(t('errors.failedToCreateOrder'));
@@ -370,7 +447,7 @@ const ExternalOrder: React.FC = () => {
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <Typography variant="subtitle1">
-              {new Date(order.createdAt).toLocaleDateString()} - {t(`orderStatus.${order.status.toLowerCase()}`)}
+              {new Date(order.createdAt).toLocaleDateString()} - {t(`orders.status.${order.status.toLowerCase()}`)}
             </Typography>
             <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
               €{order.total.toFixed(2)}
@@ -476,43 +553,10 @@ const ExternalOrder: React.FC = () => {
   return (
     <Box sx={{ 
       display: 'flex',
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa'
+      height: '100vh',
+      backgroundColor: '#f8f9fa',
+      overflow: 'hidden'
     }}>
-      {/* Debug Information */}
-      <Box 
-        sx={{ 
-          position: 'fixed', 
-          bottom: 0, 
-          left: 0, 
-          zIndex: 9999, 
-          p: 2, 
-          bgcolor: 'rgba(0,0,0,0.7)', 
-          color: 'white',
-          maxWidth: '100%',
-          overflowX: 'auto',
-          maxHeight: '200px',
-          overflowY: 'auto'
-        }}
-      >
-        <Typography variant="subtitle2">Debug Info:</Typography>
-        <Typography variant="caption" component="div">
-          userId: {userId || 'undefined'}
-        </Typography>
-        <Typography variant="caption" component="div">
-          cookiesEnabled: {cookiesEnabled.toString()}
-        </Typography>
-        <Typography variant="caption" component="div">
-          orderHistory length: {orderHistory.length}
-        </Typography>
-        <Typography variant="caption" component="div">
-          loadingHistory: {loadingHistory.toString()}
-        </Typography>
-        <Typography variant="caption" component="div">
-          Order IDs: {orderHistory.map(o => o.id).join(', ')}
-        </Typography>
-      </Box>
-
       {/* Left Sidebar */}
       <Box
         component="nav"
@@ -524,7 +568,9 @@ const ExternalOrder: React.FC = () => {
           bgcolor: 'white',
           p: 2,
           display: { xs: 'none', md: 'block' },
-          boxShadow: '0 0 10px rgba(0,0,0,0.05)'
+          boxShadow: '0 0 10px rgba(0,0,0,0.05)',
+          height: '100vh',
+          overflow: 'auto'
         }}
       >
         <Typography variant="h6" sx={{ mb: 3, fontWeight: 'bold' }}>MENU</Typography>
@@ -576,9 +622,22 @@ const ExternalOrder: React.FC = () => {
       </Box>
 
       {/* Main Content */}
-      <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, overflow: 'auto' }}>
-        {/* Search Bar */}
-        <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box 
+        sx={{ 
+          flex: 1,
+          height: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Search Bar - Fixed */}
+        <Box sx={{ 
+          p: { xs: 2, md: 3 }, 
+          bgcolor: '#f8f9fa',
+          borderBottom: 1,
+          borderColor: 'divider'
+        }}>
           <TextField
             fullWidth
             placeholder={t('search.placeholder')}
@@ -592,149 +651,201 @@ const ExternalOrder: React.FC = () => {
           />
         </Box>
 
-        {/* Order History Section - Moved here */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 3,
-            py: 2,
-            borderBottom: 1,
-            borderColor: 'divider'
-          }}>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 'bold', 
-              display: 'flex', 
-              alignItems: 'center',
-              gap: 1
-            }}>
-              <ShoppingBagOutlined />
-              {t('orderHistory.title', 'Deine Bestellungen')}
-            </Typography>
-            <Chip 
-              label={orderHistory.length > 0 ? orderHistory.length : '0'} 
-              size="small" 
-              color="secondary" 
-              variant="outlined"
-            />
-          </Box>
-          <Paper elevation={1} sx={{ p: 2, bgcolor: 'white', mb: 3 }}>
-            {loadingHistory ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : (
-              renderOrderHistory()
-            )}
-          </Paper>
-        </Box>
-
-        {/* Featured Products */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-              <StarIcon sx={{ color: 'warning.main', mr: 1 }} />
-              {t('featuredProducts')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton size="small" sx={{ bgcolor: 'grey.100' }}>
-                <ArrowBack fontSize="small" />
-              </IconButton>
-              <IconButton size="small" sx={{ bgcolor: 'grey.100' }}>
-                <ArrowForward fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-          
-          <Box sx={{ display: 'flex', gap: 2, overflow: 'auto', pb: 1 }}>
-            {featuredProducts.map((product) => (
-              <Card 
-                key={product.id} 
-                sx={{ 
-                  minWidth: 280,
-                  maxWidth: 350,
-                  position: 'relative',
-                  boxShadow: 2,
-                  '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 },
-                  transition: 'transform 0.2s, box-shadow 0.2s'
-                }}
-              >
-                <Box 
-                  sx={{ 
-                    position: 'absolute', 
-                    top: 15, 
-                    left: -5,
-                    bgcolor: 'error.main',
-                    color: 'white',
-                    py: 0.5,
-                    px: 2,
-                    clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%, 10% 50%)',
-                    zIndex: 1
-                  }}
-                >
-                  {t('recommended')}
-                </Box>
-                <CardMedia
-                  component="img"
-                  height="180"
-                  image={product.image || '/default-food-image.jpg'}
-                  alt={product.name}
-                  sx={{ objectFit: 'cover' }}
-                />
-                <CardContent>
-                  <Typography variant="h6" noWrap>{product.name}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ 
-                    height: 40, 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    mb: 2
-                  }}>
-                    {product.description}
-                  </Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" color="primary.main" fontWeight="bold">
-                      €{product.price.toFixed(2)}
-                    </Typography>
-                    <IconButton 
-                      color="primary"
-                      onClick={() => handleAddToCart(product.id)}
-                      sx={{ 
-                        bgcolor: 'primary.light', 
-                        color: 'white',
-                        '&:hover': { bgcolor: 'primary.main' } 
-                      }}
-                    >
-                      <AddIcon />
-                    </IconButton>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        </Box>
-
-        {/* Active Category Products */}
-        {activeCategory && (
-          <Box sx={{ mb: 6 }}>
-            <Box sx={{ 
+        {/* Scrollable Content */}
+        <Box sx={{ 
+          flex: 1,
+          overflow: 'auto',
+          p: { xs: 2, md: 3 },
+          pt: 0
+        }}>
+          {/* Order History Section */}
+          <Box component="div" sx={{ mb: 4 }}>
+            <Box component="div" sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
               mb: 3,
-              position: 'sticky',
-              top: 0,
-              bgcolor: '#f8f9fa',
-              zIndex: 10,
+              py: 2,
+              borderBottom: 1,
+              borderColor: 'divider'
+            }}>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 'bold', 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <ShoppingBagOutlined />
+                {t('orderHistory.title')}
+              </Typography>
+              <Chip 
+                label={orderHistory.length > 0 ? orderHistory.length : '0'} 
+                size="small" 
+                color="secondary" 
+                variant="outlined"
+              />
+            </Box>
+            <Paper elevation={1} sx={{ p: 2, bgcolor: 'white', mb: 3, maxHeight: '400px', overflow: 'auto' }}>
+              {loadingHistory ? (
+                <Box component="div" sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : orderHistory.length === 0 ? (
+                <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                  {t('orderHistory.noOrders')}
+                </Typography>
+              ) : (
+                orderHistory.map((order) => (
+                  <Accordion key={order.id} sx={{ mb: 1 }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Box component="div" sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                        <Typography variant="subtitle1">
+                          {new Date(order.createdAt).toLocaleDateString()} - {t(`orders.status.${order.status.toLowerCase()}`)}
+                        </Typography>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                          €{order.total.toFixed(2)}
+                        </Typography>
+                      </Box>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <List dense>
+                        {order.items.map((item, index) => (
+                          <ListItem key={item.productId + index}>
+                            <ListItemText
+                              primary={item.productName}
+                              secondary={`${item.quantity}x €${item.price.toFixed(2)}`}
+                            />
+                            <Typography variant="body2">
+                              €{(item.quantity * item.price).toFixed(2)}
+                            </Typography>
+                          </ListItem>
+                        ))}
+                      </List>
+                      {order.customerNote && (
+                        <Box component="div" sx={{ mt: 2 }}>
+                          <Typography variant="subtitle2" color="text.secondary">
+                            {t('orderHistory.note')}:
+                          </Typography>
+                          <Typography variant="body2">{order.customerNote}</Typography>
+                        </Box>
+                      )}
+                    </AccordionDetails>
+                  </Accordion>
+                ))
+              )}
+            </Paper>
+          </Box>
+
+          {/* Featured Products */}
+          <Box sx={{ mb: 4 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              mb: 3,
+              borderBottom: 1,
+              borderColor: 'divider',
               py: 2
             }}>
-              <Typography variant="h5" fontWeight="bold">
-                {t(`categories.${activeCategory.toLowerCase()}`)}
+              <Typography variant="h5" sx={{ 
+                fontWeight: 'bold', 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <StarIcon sx={{ color: 'warning.main' }} />
+                {t('featuredProducts')}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
+                <IconButton size="small" sx={{ bgcolor: 'grey.100' }}>
+                  <ArrowBack fontSize="small" />
+                </IconButton>
+                <IconButton size="small" sx={{ bgcolor: 'grey.100' }}>
+                  <ArrowForward fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+            
+            <Box sx={{ 
+              display: 'grid',
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(3, 1fr)',
+                lg: 'repeat(4, 1fr)'
+              },
+              gap: 3,
+              mb: 4
+            }}>
+              {featuredProducts.map((product) => (
+                <Card key={product.id} sx={CARD_STYLES.card}>
+                  <Box sx={CARD_STYLES.mediaContainer}>
+                    <Box sx={CARD_STYLES.recommendedBadge}>
+                      {t('recommended')}
+                    </Box>
+                    <CardMedia
+                      component="img"
+                      image={product.image || '/default-food-image.jpg'}
+                      alt={product.name}
+                      sx={CARD_STYLES.media}
+                    />
+                  </Box>
+                  <CardContent sx={CARD_STYLES.content}>
+                    <Typography variant="h6" gutterBottom noWrap>
+                      {product.name}
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        mb: 1,
+                        height: 40
+                      }}
+                    >
+                      {product.description}
+                    </Typography>
+                    <Box sx={CARD_STYLES.priceAction}>
+                      <Typography variant="h6" color="primary.main" fontWeight="bold">
+                        €{product.price.toFixed(2)}
+                      </Typography>
+                      <IconButton
+                        color="primary"
+                        onClick={() => handleAddToCart(product.id)}
+                        sx={{
+                          bgcolor: 'primary.light',
+                          color: 'white',
+                          '&:hover': { bgcolor: 'primary.main' }
+                        }}
+                      >
+                        <AddIcon />
+                      </IconButton>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Active Category Products */}
+          {activeCategory && (
+            <Box sx={{ mb: 6 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 3,
+                borderBottom: 1,
+                borderColor: 'divider',
+                py: 2
+              }}>
+                <Typography variant="h5" fontWeight="bold">
+                  {t(`categories.${activeCategory.toLowerCase()}`)}
+                </Typography>
                 <Chip 
                   label={`${groupedProducts[activeCategory].length} ${t('items')}`} 
                   size="small" 
@@ -742,80 +853,91 @@ const ExternalOrder: React.FC = () => {
                   variant="outlined"
                 />
               </Box>
-            </Box>
 
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-              {groupedProducts[activeCategory].map((product) => (
-                <Box key={product.id} sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 16px)', md: '1 1 calc(33.33% - 16px)' } }}>
-                  <Card sx={{ 
-                    display: 'flex', 
-                    height: '100%',
-                    boxShadow: 2,
-                    '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 },
-                    transition: 'transform 0.2s, box-shadow 0.2s'
-                  }}>
-                    <CardMedia
-                      component="img"
-                      sx={{ width: 140 }}
-                      image={product.image || '/default-food-image.jpg'}
-                      alt={product.name}
-                    />
-                    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                      <CardContent sx={{ flex: '1 0 auto', pb: 1 }}>
-                        <Typography component="div" variant="h6" noWrap>
-                          {product.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ 
-                          height: 40, 
+              <Box sx={{ 
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)'
+                },
+                gap: 3
+              }}>
+                {groupedProducts[activeCategory].map((product) => (
+                  <Card key={product.id} sx={CARD_STYLES.card}>
+                    <Box sx={CARD_STYLES.mediaContainer}>
+                      <CardMedia
+                        component="img"
+                        image={product.image || '/default-food-image.jpg'}
+                        alt={product.name}
+                        sx={CARD_STYLES.media}
+                      />
+                    </Box>
+                    <CardContent sx={CARD_STYLES.content}>
+                      <Typography variant="h6" gutterBottom noWrap>
+                        {product.name}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary"
+                        sx={{
                           overflow: 'hidden',
-                          mb: 1
-                        }}>
-                          {product.description}
-                        </Typography>
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          mb: 1,
+                          height: 40
+                        }}
+                      >
+                        {product.description}
+                      </Typography>
+                      <Box sx={CARD_STYLES.priceAction}>
                         <Typography variant="h6" color="primary.main" fontWeight="bold">
                           €{product.price.toFixed(2)}
                         </Typography>
-                      </CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', px: 2, pb: 1 }}>
                         {cart[product.id] ? (
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <IconButton 
-                              onClick={() => handleRemoveFromCart(product.id)}
-                              color="primary"
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <IconButton
                               size="small"
+                              onClick={() => handleRemoveFromCart(product.id)}
+                              sx={{ bgcolor: 'grey.100' }}
                             >
-                              <RemoveIcon />
+                              <RemoveIcon fontSize="small" />
                             </IconButton>
-                            <Typography sx={{ mx: 2 }}>
+                            <Typography sx={{ minWidth: 20, textAlign: 'center' }}>
                               {cart[product.id]}
                             </Typography>
-                            <IconButton 
-                              onClick={() => handleAddToCart(product.id)}
-                              color="primary"
+                            <IconButton
                               size="small"
+                              onClick={() => handleAddToCart(product.id)}
+                              sx={{ bgcolor: 'grey.100' }}
                             >
-                              <AddIcon />
+                              <AddIcon fontSize="small" />
                             </IconButton>
                           </Box>
                         ) : (
-                          <Button
-                            variant="contained"
-                            fullWidth
-                            size="small"
+                          <IconButton
+                            color="primary"
                             onClick={() => handleAddToCart(product.id)}
-                            sx={{ borderRadius: 2 }}
+                            sx={{
+                              bgcolor: 'primary.light',
+                              color: 'white',
+                              '&:hover': { bgcolor: 'primary.main' }
+                            }}
                           >
-                            {t('actions.addToCart')}
-                          </Button>
+                            <AddIcon />
+                          </IconButton>
                         )}
                       </Box>
-                    </Box>
+                    </CardContent>
                   </Card>
-                </Box>
-              ))}
+                ))}
+              </Box>
             </Box>
-          </Box>
-        )}
+          )}
+        </Box>
       </Box>
 
       {/* Right Sidebar - Cart */}
@@ -829,6 +951,7 @@ const ExternalOrder: React.FC = () => {
           p: 3,
           display: { xs: 'none', md: 'block' },
           boxShadow: '0 0 10px rgba(0,0,0,0.05)',
+          height: '100vh',
           overflow: 'auto'
         }}
       >

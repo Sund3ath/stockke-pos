@@ -9,7 +9,7 @@ import {
   updateProduct as apiUpdateProduct,
   deleteProduct as apiDeleteProduct
 } from './api/apolloClient';
-import { createOrder as apiCreateOrder, updateOrder as apiUpdateOrder, fetchOrders } from './api/orders';
+import { createOrder as apiCreateOrder, updateOrder as apiUpdateOrder, fetchOrders, getExternalOrdersByUserId, updateOrderStatus, updateExternalOrderStatus } from './api/orders';
 import { updateSettings as apiUpdateSettings, fetchSettings } from './api/settings';
 
 // Initial tables
@@ -20,9 +20,25 @@ const initialTables: Table[] = Array.from({ length: 12 }, (_, i) => ({
   currentOrder: null
 }));
 
+interface ExternalOrderItem {
+  id: string;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+interface ExternalOrder {
+  id: string;
+  items: ExternalOrderItem[];
+  total: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
+  customerNote?: string;
+}
+
 interface StoreState {
   // Authentication
-  currentUser: { username: string; role: string } | null;
+  currentUser: { id: string; username: string; role: string } | null;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean;
   initUser: () => boolean;
@@ -68,6 +84,11 @@ interface StoreState {
     signature: string;
     total: number;
   }>;
+
+  user: { id: string; username: string } | null;
+  externalOrders: ExternalOrder[];
+  loadExternalOrders: () => Promise<void>;
+  updateExternalOrderStatus: (orderId: string, status: 'completed' | 'cancelled') => void;
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -89,6 +110,7 @@ export const useStore = create<StoreState>((set, get) => ({
         const decodedToken = JSON.parse(jsonPayload);
         set({
           currentUser: {
+            id: decodedToken.id,
             username: decodedToken.username,
             role: decodedToken.role
           }
@@ -116,6 +138,7 @@ export const useStore = create<StoreState>((set, get) => ({
           const decodedToken = JSON.parse(jsonPayload);
           set({
             currentUser: {
+              id: decodedToken.id,
               username: decodedToken.username,
               role: decodedToken.role
             }
@@ -289,13 +312,15 @@ export const useStore = create<StoreState>((set, get) => ({
         0
       );
       
+      // Prüfe, ob wir eine externe Bestellung bearbeiten
+      const externalOrderId = localStorage.getItem('currentExternalOrderId');
+      
       // Wenn ein Tisch ausgewählt ist und eine Bestellung hat, aktualisiere diese
       if (selectedTable?.currentOrder?.id) {
         // Aktualisiere die bestehende Bestellung
         const order = await apiUpdateOrder(selectedTable.currentOrder.id, {
           items: currentOrder.map(item => ({
             productId: item.product.id,
-            productName: item.product.name,
             quantity: item.quantity,
             price: item.product.price,
             taxRate: item.product.taxRate
@@ -327,13 +352,22 @@ export const useStore = create<StoreState>((set, get) => ({
           set(state => ({
             tseTransactions: [...state.tseTransactions, tseTransaction]
           }));
+          
+          // Falls es eine externe Bestellung ist, aktualisiere auch deren Status
+          if (externalOrderId) {
+            try {
+              await get().updateExternalOrderStatus(externalOrderId, 'completed');
+              localStorage.removeItem('currentExternalOrderId');
+            } catch (error) {
+              console.error('Fehler beim Aktualisieren der externen Bestellung:', error);
+            }
+          }
         }
       } else {
         // Erstelle eine neue Bestellung
         const order = await apiCreateOrder({
           items: currentOrder.map(item => ({
             productId: item.product.id,
-            productName: item.product.name,
             quantity: item.quantity,
             price: item.product.price,
             taxRate: item.product.taxRate
@@ -367,6 +401,16 @@ export const useStore = create<StoreState>((set, get) => ({
           set(state => ({
             tseTransactions: [...state.tseTransactions, tseTransaction]
           }));
+          
+          // Falls es eine externe Bestellung ist, aktualisiere auch deren Status
+          if (externalOrderId) {
+            try {
+              await get().updateExternalOrderStatus(externalOrderId, 'completed');
+              localStorage.removeItem('currentExternalOrderId');
+            } catch (error) {
+              console.error('Fehler beim Aktualisieren der externen Bestellung:', error);
+            }
+          }
         }
       }
     } catch (error) {
@@ -394,6 +438,8 @@ export const useStore = create<StoreState>((set, get) => ({
     if (currentOrder.length > 0) {
       // If we had a previous table selected, save the order there
       if (previousTable) {
+        // Erstelle ein Order-Objekt ohne productName für die Datenbank
+        // Der productName wird beim Abrufen aus der Datenbank basierend auf der productId ergänzt
         const order: Order = {
           id: Date.now().toString(),
           items: currentOrder,
@@ -401,7 +447,11 @@ export const useStore = create<StoreState>((set, get) => ({
           status: 'pending',
           timestamp: new Date().toISOString(),
           paymentMethod: 'cash',
-          tableId: previousTable.id
+          tableId: previousTable.id,
+          user: {
+            id: 'system',
+            username: 'System'
+          }
         };
         try {
           await state.occupyTable(previousTable.id, order);
@@ -417,7 +467,11 @@ export const useStore = create<StoreState>((set, get) => ({
           status: 'pending',
           timestamp: new Date().toISOString(),
           paymentMethod: 'cash',
-          isTakeaway: true
+          isTakeaway: true,
+          user: {
+            id: 'system',
+            username: 'System'
+          }
         };
         set(state => ({ orders: [...state.orders, order] }));
       }
@@ -446,7 +500,6 @@ export const useStore = create<StoreState>((set, get) => ({
       const orderInput = {
         items: order.items.map(item => ({
           productId: item.product.id,
-          productName: item.product.name,
           quantity: item.quantity,
           price: item.product.price,
           taxRate: item.product.taxRate || 19
@@ -547,5 +600,38 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   // TSE Transactions
-  tseTransactions: []
+  tseTransactions: [],
+
+  user: null,
+  externalOrders: [],
+  loadExternalOrders: async () => {
+    try {
+      const currentUser = get().currentUser;
+      if (!currentUser) return;
+
+      const orders = await getExternalOrdersByUserId(currentUser.id);
+      set({ externalOrders: orders });
+    } catch (error) {
+      console.error('Error loading external orders:', error);
+    }
+  },
+  updateExternalOrderStatus: async (orderId: string, status: 'completed' | 'cancelled') => {
+    try {
+      console.log(`Attempting to update external order ${orderId} to status ${status}`);
+      // Die API erwartet den Status in Großbuchstaben
+      const apiStatus = status.toUpperCase() as 'COMPLETED' | 'CANCELLED';
+      
+      // Verwende die updateExternalOrderStatus-Funktion aus der API
+      await updateExternalOrderStatus(orderId, apiStatus);
+      
+      console.log(`External order status update successful`);
+      
+      // Refresh orders after update
+      get().loadExternalOrders();
+    } catch (error) {
+      console.error('Error updating external order status:', error);
+      // Den Fehler weitergeben, damit der Aufrufer ihn behandeln kann
+      throw error;
+    }
+  }
 }));

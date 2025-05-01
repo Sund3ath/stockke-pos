@@ -47,5 +47,9 @@
     "confirmed": "Confirmed",
     "completed": "Completed",
     "cancelled": "Cancelled"
+  },
+  "externalOrders": {
+    "title": "External Orders",
+    "noOrders": "No external orders available"
   }
 } 

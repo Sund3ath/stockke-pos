@@ -86,7 +86,8 @@
     "noteAdded": "Note added successfully",
     "noteUpdated": "Note updated successfully",
     "noteDeleted": "Note deleted successfully",
-    "clickToAddNote": "Click to add a note"
+    "clickToAddNote": "Click to add a note",
+    "confirmUnsavedChanges": "You have unsaved changes. Do you want to continue?"
   },
   "orders": {
     "status": {

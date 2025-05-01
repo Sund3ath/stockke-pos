@@ -238,5 +238,51 @@
     "customerType": "Kundentyp",
     "individual": "Privatperson",
     "business": "Geschäftskunde"
+  },
+  "orderHistory": {
+    "title": "Deine Bestellungen",
+    "noOrders": "Keine Bestellungen vorhanden",
+    "note": "Notiz"
+  },
+  "search": {
+    "placeholder": "Produkte suchen..."
+  },
+  "featuredProducts": "Empfohlene Produkte",
+  "items": "Artikel",
+  "cart": {
+    "myOrder": "Meine Bestellung",
+    "empty": "Dein Warenkorb ist leer",
+    "subtotal": "Zwischensumme",
+    "deliveryFee": "Liefergebühr",
+    "total": "Gesamtsumme",
+    "checkout": "Zur Kasse",
+    "delivery": "Lieferung",
+    "pickup": "Abholung",
+    "deliveryMethod": "Liefermethode"
+  },
+  "actions": {
+    "addToCart": "In den Warenkorb"
+  },
+  "recommended": "Empfohlen",
+  "categories": {
+    "mains": "Hauptgerichte",
+    "starters": "Vorspeisen",
+    "sides": "Beilagen",
+    "salads": "Salate",
+    "desserts": "Desserts",
+    "drinks": "Getränke",
+    "alcoholic": "Alkoholische Getränke",
+    "non-alcoholic": "Alkoholfreie Getränke",
+    "coffee": "Kaffee",
+    "tea": "Tee",
+    "specials": "Spezialitäten",
+    "uncategorized": "Nicht kategorisiert"
+  },
+  "errors": {
+    "failedToLoadProducts": "Fehler beim Laden der Produkte",
+    "failedToCreateOrder": "Fehler beim Erstellen der Bestellung"
+  },
+  "externalOrder": {
+    "noProducts": "Keine Produkte verfügbar"
   }
 } 

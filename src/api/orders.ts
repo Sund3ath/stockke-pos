@@ -44,9 +44,14 @@ export const convertApiOrderToOrder = (apiOrder: ApiOrder): Order => {
     total: apiOrder.total,
     status: apiOrder.status,
     timestamp: apiOrder.timestamp,
+    createdAt: apiOrder.createdAt,
     paymentMethod: apiOrder.paymentMethod as 'cash' | 'card',
     cashReceived: apiOrder.cashReceived,
-    tableId: apiOrder.tableId
+    tableId: apiOrder.tableId,
+    user: {
+      id: 'system',
+      username: 'System'
+    }
   };
 };
 
@@ -203,6 +208,28 @@ export const GET_EXTERNAL_ORDERS_BY_USER_ID = gql`
   }
 `;
 
+export const UPDATE_EXTERNAL_ORDER_STATUS = gql`
+  mutation UpdateExternalOrderStatus($id: ID!, $status: OrderStatus!) {
+    updateExternalOrderStatus(id: $id, status: $status) {
+      id
+      status
+    }
+  }
+`;
+
+// Define the CreateExternalOrderInput type
+export interface CreateExternalOrderInput {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+    taxRate: number;
+  }>;
+  total: number;
+  adminUserId: string;
+  customerNote?: string;
+}
+
 interface OrdersQueryResult {
   orders: ApiOrder[];
 }
@@ -243,9 +270,30 @@ export const fetchOrder = async (id: string): Promise<Order | null> => {
 
 export const createOrder = async (input: any): Promise<Order | null> => {
   try {
+    // Sanitize the input if it contains items with productName
+    let sanitizedInput = { ...input };
+    if (input.items) {
+      sanitizedInput.items = input.items.map((item: any) => {
+        // Log each item for debugging
+        console.log('Processing create item:', JSON.stringify(item));
+        
+        // Extract only the allowed fields
+        const { productId, quantity, price, taxRate } = item;
+        
+        // Explicitly check if productName exists and warn about it
+        if ('productName' in item) {
+          console.warn(`Warning: productName found in create item ${productId} and will be removed`);
+        }
+        
+        return { productId, quantity, price, taxRate };
+      });
+    }
+    
+    console.log('Sanitized create input for GraphQL:', JSON.stringify(sanitizedInput));
+    
     const { data } = await apolloClient.mutate({
       mutation: CREATE_ORDER,
-      variables: { input },
+      variables: { input: sanitizedInput },
       update: (cache, { data: { createOrder } }) => {
         const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
         if (existingOrders) {
@@ -271,11 +319,15 @@ export const createOrder = async (input: any): Promise<Order | null> => {
 
 export const updateOrderStatus = async (id: string, status: string): Promise<Order | null> => {
   try {
+    console.log(`Updating order ${id} to status ${status}`);
+    
     const { data } = await apolloClient.mutate({
       mutation: UPDATE_ORDER_STATUS,
       variables: { id, status },
       refetchQueries: [{ query: GET_ORDERS }]
     });
+    
+    console.log(`Order status update result:`, data);
     
     if (data.updateOrderStatus) {
       // Da updateOrderStatus nur id und status zurückgibt, müssen wir die vollständige Bestellung abrufen
@@ -284,15 +336,36 @@ export const updateOrderStatus = async (id: string, status: string): Promise<Ord
     return null;
   } catch (error) {
     console.error('Error updating order status:', error);
-    return null;
+    throw error; // Werfen Sie den Fehler, damit der Aufrufer ihn behandeln kann
   }
 };
 
 export const updateOrder = async (id: string, input: any): Promise<Order | null> => {
   try {
+    // Sanitize the input if it contains items with productName
+    let sanitizedInput = { ...input };
+    if (input.items) {
+      sanitizedInput.items = input.items.map((item: any) => {
+        // Log each item for debugging
+        console.log('Processing update item:', JSON.stringify(item));
+        
+        // Extract only the allowed fields
+        const { productId, quantity, price, taxRate } = item;
+        
+        // Explicitly check if productName exists and warn about it
+        if ('productName' in item) {
+          console.warn(`Warning: productName found in update item ${productId} and will be removed`);
+        }
+        
+        return { productId, quantity, price, taxRate };
+      });
+    }
+    
+    console.log('Sanitized update input for GraphQL:', JSON.stringify(sanitizedInput));
+    
     const { data } = await apolloClient.mutate({
       mutation: UPDATE_ORDER,
-      variables: { id, input },
+      variables: { id, input: sanitizedInput },
       update: (cache, { data: { updateOrder } }) => {
         const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
         if (existingOrders) {
@@ -335,9 +408,32 @@ export const fetchDailySales = async (date: string) => {
 
 export const createExternalOrder = async (input: CreateExternalOrderInput) => {
   try {
+    console.log('Input received by createExternalOrder API:', JSON.stringify(input));
+    
+    // Validate the input to ensure no productName is sent
+    const sanitizedInput = {
+      ...input,
+      items: input.items.map(item => {
+        // Log each item to debug
+        console.log('Processing item:', JSON.stringify(item));
+        
+        // Create a new object with only the allowed fields
+        const { productId, quantity, price, taxRate } = item;
+        
+        // Explicitly check if productName exists and warn about it
+        if ('productName' in item) {
+          console.warn(`Warning: productName found in item ${productId} and will be removed`);
+        }
+        
+        return { productId, quantity, price, taxRate };
+      })
+    };
+    
+    console.log('Sanitized input for GraphQL:', JSON.stringify(sanitizedInput));
+    
     const { data } = await apolloClient.mutate({
       mutation: CREATE_EXTERNAL_ORDER,
-      variables: { input }
+      variables: { input: sanitizedInput }
     });
     return data.createExternalOrder;
   } catch (error) {
@@ -357,5 +453,25 @@ export const getExternalOrdersByUserId = async (userId: string) => {
   } catch (error) {
     console.error('Error fetching external orders:', error);
     return [];
+  }
+};
+
+export const updateExternalOrderStatus = async (id: string, status: 'COMPLETED' | 'CANCELLED'): Promise<any> => {
+  try {
+    console.log(`Updating external order ${id} status to ${status}`);
+    
+    const { data } = await apolloClient.mutate({
+      mutation: UPDATE_EXTERNAL_ORDER_STATUS,
+      variables: { id, status },
+      refetchQueries: [{ query: GET_EXTERNAL_ORDERS_BY_USER_ID, variables: { userId: localStorage.getItem('userId') } }]
+    });
+    
+    console.log(`External order status update result:`, data);
+    
+    return data.updateExternalOrderStatus;
+  } catch (error) {
+    console.error('Error updating external order status:', error);
+    console.error('Detailed error:', JSON.stringify(error, null, 2));
+    throw error;
   }
 };
