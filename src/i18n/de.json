@@ -1,7 +1,21 @@
 {
   "errors": {
     "failedToLoadProducts": "Fehler beim Laden der Produkte",
-    "failedToCreateOrder": "Bestellung konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+    "failedToCreateOrder": "Bestellung konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
+    "orderCreationFailed": "Bestellung konnte nicht erstellt werden. Bitte versuchen Sie es erneut."
+  },
+  "customerInfo": {
+    "title": "Kundeninformationen",
+    "name": "Name",
+    "telephone": "Telefonnummer",
+    "note": "Anmerkung"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "submit": "Bestätigen"
+  },
+  "checkout": {
+    "proceed": "Zur Kasse"
   },
   "externalOrder": {
     "title": "Speisekarte",

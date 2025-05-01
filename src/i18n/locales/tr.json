@@ -91,7 +91,8 @@
     "noteUpdated": "Not başarıyla güncellendi",
     "noteDeleted": "Not başarıyla silindi",
     "clickToAddNote": "Not eklemek için tıklayın",
-    "confirmUnsavedChanges": "Kaydedilmemiş değişiklikler var. Devam etmek istiyor musunuz?"
+    "confirmUnsavedChanges": "Kaydedilmemiş değişiklikler var. Devam etmek istiyor musunuz?",
+    "loginRequired": "Siparişi park etmek için lütfen giriş yapın"
   },
   "orders": {
     "status": {

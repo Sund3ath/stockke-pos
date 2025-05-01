@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
 import { AppRoutes } from './routes/AppRoutes';
 import { useStore } from './store';
 
@@ -27,9 +26,11 @@ function App() {
   }, []);
 
   return (
-    <Router>
-      <AppRoutes />
-    </Router>
+    <div className="min-h-screen bg-gray-100">
+      <div className="flex flex-col min-h-screen">
+        <AppRoutes />
+      </div>
+    </div>
   );
 }
 

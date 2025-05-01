@@ -35,7 +35,8 @@ export const POS: React.FC = () => {
     selectedTable,
     selectTable,
     occupyTable,
-    setCurrentOrder
+    setCurrentOrder,
+    currentUser
   } = useStore();
   
   const { externalOrders, loadExternalOrders } = useExternalOrdersStore();
@@ -82,6 +83,11 @@ export const POS: React.FC = () => {
       return;
     }
 
+    if (!currentUser) {
+      alert(t('pos.loginRequired'));
+      return;
+    }
+
     // Check if there's an existing order for this table
     const existingOrder = selectedTable.currentOrder;
     const order = {
@@ -93,8 +99,8 @@ export const POS: React.FC = () => {
       paymentMethod: 'cash' as const,
       tableId: selectedTable.id,
       user: {
-        id: 'system',
-        username: 'System'
+        id: currentUser.id,
+        username: currentUser.username
       }
     };
 
@@ -110,7 +116,11 @@ export const POS: React.FC = () => {
         })),
         total,
         status: 'pending',
-        tableId: selectedTable.id
+        tableId: selectedTable.id,
+        user: {
+          id: currentUser.id,
+          username: currentUser.username
+        }
       });
     }
 

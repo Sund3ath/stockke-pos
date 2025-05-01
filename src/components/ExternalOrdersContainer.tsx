@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useExternalOrdersStore } from '../store/externalOrders';
 import { useStore } from '../store';
 import { format } from 'date-fns';
 import { ShoppingBag, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Product } from '../types';
+import { useSubscription } from '@apollo/client';
+import { EXTERNAL_ORDER_CREATED_SUBSCRIPTION } from '../api/orders';
 
 interface ExternalOrderItem {
   id: string;
@@ -28,13 +30,64 @@ export const ExternalOrdersContainer: React.FC = () => {
   const { setCurrentOrder, clearOrder } = useStore();
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const { products } = useStore();
+  const previousOrdersRef = useRef<string[]>([]);
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio element
+  useEffect(() => {
+    notificationSound.current = new Audio('/sounds/notification.mp3');
+    notificationSound.current.load(); // Preload the sound
+  }, []);
+
+  // Function to play notification sound
+  const playNotificationSound = () => {
+    if (notificationSound.current) {
+      notificationSound.current.currentTime = 0; // Reset to start
+      notificationSound.current.play().catch(error => {
+        console.error('Error playing notification sound:', error);
+      });
+    }
+  };
+
+  // Subscribe to new external orders
+  const { data: subscriptionData } = useSubscription(EXTERNAL_ORDER_CREATED_SUBSCRIPTION);
 
   useEffect(() => {
     loadExternalOrders();
-    // Set up polling for new orders
+    // Set up polling for new orders (as fallback)
     const interval = setInterval(loadExternalOrders, 30000); // Poll every 30 seconds
     return () => clearInterval(interval);
   }, [loadExternalOrders]);
+
+  useEffect(() => {
+    if (subscriptionData?.externalOrderCreated) {
+      // Play sound for new order
+      playNotificationSound();
+      
+      // Reload orders to get the latest state
+      loadExternalOrders();
+    }
+  }, [subscriptionData, loadExternalOrders]);
+
+  useEffect(() => {
+    // Get current pending order IDs
+    const currentPendingOrderIds = externalOrders
+      .filter(order => order.status.toLowerCase() === 'pending')
+      .map(order => order.id);
+
+    // Check if there are new orders that weren't in the previous list
+    const newOrders = currentPendingOrderIds.filter(
+      id => !previousOrdersRef.current.includes(id)
+    );
+
+    // If there are new orders and we're not on the first load, play the sound
+    if (newOrders.length > 0 && previousOrdersRef.current.length > 0) {
+      playNotificationSound();
+    }
+
+    // Update the previous orders reference
+    previousOrdersRef.current = currentPendingOrderIds;
+  }, [externalOrders]);
 
   const handleOrderClick = (order: ExternalOrder) => {
     if (selectedOrder === order.id) {

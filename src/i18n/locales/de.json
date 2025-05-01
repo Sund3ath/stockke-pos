@@ -94,7 +94,8 @@
     "completeOrder": "Bestellung abschließen",
     "errorCompletingOrder": "Fehler beim Abschließen der Bestellung. Bitte versuchen Sie es erneut.",
     "takeaway": "Zum Mitnehmen",
-    "delivery": "Lieferung"
+    "delivery": "Lieferung",
+    "loginRequired": "Bitte melden Sie sich an, um eine Bestellung zu parken"
   },
   "orders": {
     "status": {

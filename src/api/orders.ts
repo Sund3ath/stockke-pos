@@ -124,6 +124,10 @@ const CREATE_ORDER = gql`
       tableId
       createdAt
       updatedAt
+      user {
+        id
+        username
+      }
     }
   }
 `;
@@ -182,10 +186,20 @@ export const CREATE_EXTERNAL_ORDER = gql`
   mutation CreateExternalOrder($input: CreateExternalOrderInput!) {
     createExternalOrder(input: $input) {
       id
+      orderId
       total
       status
+      source
+      customerName
+      customerPhone
+      customerAddress
+      items {
+        productName
+        quantity
+        price
+      }
       createdAt
-      customerNote
+      updatedAt
     }
   }
 `;
@@ -197,7 +211,6 @@ export const GET_EXTERNAL_ORDERS_BY_USER_ID = gql`
       total
       status
       createdAt
-      customerNote
       items {
         id
         productName
@@ -289,20 +302,17 @@ export const createOrder = async (input: any): Promise<Order | null> => {
       });
     }
     
+    // Remove user from input as it will be handled by the context
+    delete sanitizedInput.user;
+    
     console.log('Sanitized create input for GraphQL:', JSON.stringify(sanitizedInput));
     
     const { data } = await apolloClient.mutate({
       mutation: CREATE_ORDER,
       variables: { input: sanitizedInput },
-      update: (cache, { data: { createOrder } }) => {
-        const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
-        if (existingOrders) {
-          cache.writeQuery({
-            query: GET_ORDERS,
-            data: {
-              orders: [...existingOrders.orders, createOrder]
-            }
-          });
+      context: {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       }
     });
@@ -361,11 +371,24 @@ export const updateOrder = async (id: string, input: any): Promise<Order | null>
       });
     }
     
+    // Ensure user information is included
+    if (input.user) {
+      sanitizedInput.user = {
+        id: input.user.id,
+        username: input.user.username
+      };
+    }
+    
     console.log('Sanitized update input for GraphQL:', JSON.stringify(sanitizedInput));
     
     const { data } = await apolloClient.mutate({
       mutation: UPDATE_ORDER,
       variables: { id, input: sanitizedInput },
+      context: {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      },
       update: (cache, { data: { updateOrder } }) => {
         const existingOrders = cache.readQuery<OrdersQueryResult>({ query: GET_ORDERS });
         if (existingOrders) {
@@ -475,3 +498,26 @@ export const updateExternalOrderStatus = async (id: string, status: 'COMPLETED' 
     throw error;
   }
 };
+
+export const EXTERNAL_ORDER_CREATED_SUBSCRIPTION = gql`
+  subscription ExternalOrderCreated {
+    externalOrderCreated {
+      id
+      orderId
+      status
+      source
+      customerName
+      customerPhone
+      customerAddress
+      items {
+        productName
+        quantity
+        price
+        taxRate
+      }
+      total
+      createdAt
+      updatedAt
+    }
+  }
+`;

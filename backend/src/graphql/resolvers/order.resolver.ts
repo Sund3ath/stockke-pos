@@ -4,11 +4,16 @@ import { FindOptionsWhere } from 'typeorm';
 import { ExternalOrder, OrderStatus } from '../../entity/ExternalOrder';
 import { DataSource } from 'typeorm';
 import { Product } from '../../entity/Product';
+import { PubSub } from 'graphql-subscriptions';
+import { withFilter } from 'graphql-subscriptions';
 
 // Repositories
 const orderRepository = AppDataSource.getRepository(Order);
 const orderItemRepository = AppDataSource.getRepository(OrderItem);
 const userRepository = AppDataSource.getRepository(User);
+
+// Constants
+const EXTERNAL_ORDER_CREATED = 'EXTERNAL_ORDER_CREATED';
 
 // Input types
 interface CreateOrderInput {
@@ -52,11 +57,23 @@ interface CreateExternalOrderInput {
   total: number;
   adminUserId: string;
   customerNote?: string;
+  customerName: string;
+  customerTelephone: string;
 }
 
 interface Context {
   dataSource: DataSource;
 }
+
+interface ExternalOrderEvent {
+  externalOrderCreated: ExternalOrder;
+}
+
+type PubSubEvent = {
+  [key: string]: any;
+};
+
+const pubsub = new PubSub();
 
 export const orderResolvers = {
   Query: {
@@ -98,9 +115,9 @@ export const orderResolvers = {
     },
 
     // External orders by user ID
-    externalOrdersByUserId: async (_: any, { userId }: { userId: string }, { dataSource }: Context) => {
+    externalOrdersByUserId: async (_: any, { userId }: { userId: string }) => {
       try {
-        const externalOrderRepository = dataSource.getRepository(ExternalOrder);
+        const externalOrderRepository = AppDataSource.getRepository(ExternalOrder);
         return await externalOrderRepository.find({
           where: { adminUserId: userId },
           relations: ['items'],
@@ -360,94 +377,93 @@ export const orderResolvers = {
       }
     },
 
-    createExternalOrder: async (
-      _: any,
-      { input }: { input: CreateExternalOrderInput },
-      { dataSource }: Context
-    ) => {
-      const orderRepository = dataSource.getRepository(ExternalOrder);
-      const orderItemRepository = dataSource.getRepository(OrderItem);
-      const productRepository = dataSource.getRepository(Product);
-
-      // Start a transaction
-      const queryRunner = dataSource.createQueryRunner();
-      await queryRunner.connect();
-      await queryRunner.startTransaction();
-
+    createExternalOrder: async (_: any, { input }: { input: CreateExternalOrderInput }, { dataSource }: Context) => {
       try {
-        console.log('Creating external order with input:', JSON.stringify(input));
-        
-        // Create the order
-        const order = orderRepository.create({
-          total: input.total,
-          status: OrderStatus.PENDING,
-          adminUserId: input.adminUserId,
-          customerNote: input.customerNote
-        });
+        const orderRepository = dataSource.getRepository(Order);
+        const productRepository = dataSource.getRepository(Product);
+        const externalOrderRepository = dataSource.getRepository(ExternalOrder);
+        const userRepository = dataSource.getRepository(User);
 
-        // Save the order first to get the ID
-        const savedOrder = await queryRunner.manager.save(order);
-        console.log('Created external order with ID:', savedOrder.id);
-
-        // Fetch all products at once to get their names
-        const productIds = input.items.map(item => item.productId);
-        console.log('Fetching products with IDs:', productIds);
-        
-        const products = await productRepository.findByIds(productIds);
-        
-        if (products.length !== productIds.length) {
-          // Convert all IDs to strings for comparison
-          const foundIds = products.map(p => String(p.id));
-          const missingIds = productIds.filter(id => !foundIds.includes(String(id)));
-          console.error('Missing products with IDs:', missingIds);
-          throw new Error(`Some products were not found: ${missingIds.join(', ')}`);
+        // Get the admin user - convert to number for User entity but keep original for external order
+        const adminUser = await userRepository.findOne({ where: { id: Number(input.adminUserId) } });
+        if (!adminUser) {
+          throw new Error('Admin user not found');
         }
-        
-        // Create product ID to name mapping
-        const productMap = products.reduce((acc, product) => {
-          acc[product.id] = product.name;
-          return acc;
-        }, {} as { [key: string]: string });
-        
-        console.log('Created product map:', productMap);
 
-        // Create and save order items
-        const orderItems = input.items.map(item => {
-          const productName = productMap[item.productId];
-          if (!productName) {
-            throw new Error(`Product with ID ${item.productId} not found`);
-          }
-          
-          console.log(`Creating order item for product ${item.productId} (${productName})`);
+        // Create the order
+        const orderData = {
+          status: OrderStatus.PENDING,
+          items: [],
+          total: input.total,
+          type: 'external',
+          timestamp: new Date().toISOString(),
+          customerNote: input.customerNote || '',
+          paymentMethod: 'external',
+          user: adminUser
+        };
 
-          return orderItemRepository.create({
-            externalOrder: savedOrder,
-            externalOrderId: savedOrder.id,
-            productId: item.productId,
-            productName: productName,
-            quantity: item.quantity,
-            price: item.price,
-            taxRate: item.taxRate
-          });
+        const order = orderRepository.create(orderData);
+        
+        // Process items
+        const items = await Promise.all(
+          input.items.map(async (item) => {
+            const product = await productRepository.findOne({ where: { id: parseInt(item.productId, 10) } });
+            if (!product) {
+              console.error(`Product not found: ${item.productId}`);
+              return null;
+            }
+
+            return {
+              product,
+              quantity: item.quantity,
+              price: item.price,
+              taxRate: item.taxRate
+            };
+          })
+        );
+
+        // Filter out null items
+        const validItems = items.filter((item): item is { product: Product; quantity: number; price: number; taxRate: number } => item !== null);
+
+        // Create order items
+        const orderItems = validItems.map(item => {
+          const orderItem = new OrderItem();
+          orderItem.productId = item.product.id.toString();
+          orderItem.productName = item.product.name;
+          orderItem.quantity = item.quantity;
+          orderItem.price = item.price;
+          orderItem.taxRate = item.taxRate;
+          return orderItem;
         });
 
-        const savedItems = await queryRunner.manager.save(orderItems);
-        console.log(`Created ${savedItems.length} order items`);
-        
-        await queryRunner.commitTransaction();
-        console.log('Transaction committed successfully');
+        order.items = orderItems;
+        const savedOrder = await orderRepository.save(order);
 
-        // Fetch the complete order with items
-        return await orderRepository.findOne({
-          where: { id: savedOrder.id },
-          relations: ['items']
+        // Create external order
+        const externalOrderData = {
+          orderId: savedOrder.id.toString(),
+          status: OrderStatus.PENDING,
+          source: 'web',
+          customerName: input.customerName,
+          customerPhone: input.customerTelephone,
+          adminUserId: input.adminUserId,
+          items: orderItems,
+          total: input.total,
+          customerNote: input.customerNote || ''
+        };
+
+        const externalOrder = externalOrderRepository.create(externalOrderData);
+        const savedExternalOrder = await externalOrderRepository.save(externalOrder);
+
+        // Publish the new external order
+        await pubsub.publish(EXTERNAL_ORDER_CREATED, {
+          externalOrderCreated: savedExternalOrder
         });
+
+        return savedExternalOrder;
       } catch (error) {
-        console.error('Error in createExternalOrder:', error);
-        await queryRunner.rollbackTransaction();
-        throw error;
-      } finally {
-        await queryRunner.release();
+        console.error('Error creating external order:', error);
+        throw new Error('Error creating external order');
       }
     },
 
@@ -484,6 +500,18 @@ export const orderResolvers = {
       } catch (error) {
         console.error('Error updating external order status:', error);
         throw error;
+      }
+    }
+  },
+  Subscription: {
+    externalOrderCreated: {
+      subscribe: () => {
+        try {
+          return (pubsub as any).asyncIterator(EXTERNAL_ORDER_CREATED);
+        } catch (error) {
+          console.error('Error setting up subscription:', error);
+          throw error;
+        }
       }
     }
   }

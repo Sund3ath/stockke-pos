@@ -111,6 +111,12 @@ const CARD_STYLES = {
   }
 };
 
+interface CustomerInfo {
+  name: string;
+  telephone: string;
+  note: string;
+}
+
 const ExternalOrder: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const [products, setProducts] = useState<Product[]>([]);
@@ -133,6 +139,12 @@ const ExternalOrder: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('delivery');
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+    name: '',
+    telephone: '',
+    note: ''
+  });
 
   // Force German language on component mount
   useEffect(() => {
@@ -349,77 +361,113 @@ const ExternalOrder: React.FC = () => {
     }
   };
 
+  const handleCustomerInfoSubmit = () => {
+    handleCheckout();
+    setIsCustomerModalOpen(false);
+  };
+
+  const renderCustomerInfoModal = () => {
+    return (
+      <Dialog open={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)}>
+        <DialogTitle>{t('customerInfo.title')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <TextField
+              label={t('customerInfo.name')}
+              value={customerInfo.name}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, name: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label={t('customerInfo.telephone')}
+              value={customerInfo.telephone}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, telephone: e.target.value })}
+              fullWidth
+              required
+            />
+            <TextField
+              label={t('customerInfo.note')}
+              value={customerInfo.note}
+              onChange={(e) => setCustomerInfo({ ...customerInfo, note: e.target.value })}
+              fullWidth
+              multiline
+              rows={4}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIsCustomerModalOpen(false)}>{t('common.cancel')}</Button>
+          <Button
+            onClick={handleCustomerInfoSubmit}
+            variant="contained"
+            disabled={!customerInfo.name || !customerInfo.telephone}
+          >
+            {t('common.submit')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   const handleCheckout = async () => {
+    if (!userId || getTotalItems() === 0) return;
+
     try {
       setIsSubmitting(true);
       setOrderError(null);
 
       const orderItems = Object.entries(cart).map(([productId, quantity]) => {
         const product = products.find(p => p.id === productId);
-        if (!product) throw new Error('Product not found');
+        if (!product) throw new Error(`Product ${productId} not found`);
         
         return {
           productId,
-          productName: product.name,
           quantity,
-          price: product.price
+          price: product.price,
+          taxRate: product.taxRate || 0
         };
       });
 
-      console.log('Original orderItems:', orderItems);
-      
-      const total = calculateTotal();
-      
-      // Create a new order object for cookies
-      const newOrder: CookieOrder = {
-        id: `local-${Date.now()}`,
+      const input = {
         items: orderItems,
-        total,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        customerNote: ''
+        total: calculateTotal(),
+        adminUserId: userId,
+        customerNote: customerInfo.note,
+        customerName: customerInfo.name,
+        customerTelephone: customerInfo.telephone
       };
-      
-      // Save the order to cookies
-      saveOrderToCookies(newOrder);
-      
-      // Also try to create an external order in the background if possible
-      try {
-        // Create a new array without productName for GraphQL
-        const externalOrderItems = Object.entries(cart).map(([productId, quantity]) => {
-          const product = products.find(p => p.id === productId);
-          if (!product) throw new Error('Product not found');
-          
-          return {
-            productId,
-            quantity,
-            price: product.price,
-            taxRate: product.taxRate || 19
-          };
-        });
-        
-        console.log('ExternalOrderItems:', externalOrderItems);
-        
-        const input = {
-          items: externalOrderItems,
-          total,
-          adminUserId: userId!,
-          customerNote: ''
-        };
-        
-        console.log('Final input for createExternalOrder:', JSON.stringify(input));
-        
-        await createExternalOrder(input);
-      } catch (error) {
-        console.error('Detailed error in createExternalOrder:', error);
-      }
-      
+
+      console.log('Final input for createExternalOrder:', JSON.stringify(input));
+
+      await createExternalOrder(input);
       setOrderSuccess(true);
       setCart({});
-      setIsCartOpen(false);
+
+      // Save order to cookies if enabled
+      if (cookiesEnabled) {
+        const newOrder: CookieOrder = {
+          id: `order-${Date.now()}`,
+          items: orderItems.map(item => {
+            const product = products.find(p => p.id === item.productId);
+            return {
+              productId: item.productId,
+              productName: product?.name || 'Unknown Product',
+              quantity: item.quantity,
+              price: item.price
+            };
+          }),
+          total: calculateTotal(),
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          customerNote: customerInfo.note
+        };
+        saveOrderToCookies(newOrder);
+      }
+
     } catch (error) {
-      console.error('Error creating order:', error);
-      setOrderError(t('errors.failedToCreateOrder'));
+      console.error('Detailed error in createExternalOrder:', error);
+      setOrderError(t('errors.orderCreationFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -493,6 +541,30 @@ const ExternalOrder: React.FC = () => {
     .length > 0 ? 
     products.filter(p => p.featured) : 
     products.slice(0, 3);
+
+  const renderCartDrawer = () => {
+    return (
+      <Drawer
+        anchor={isMobile ? 'bottom' : 'right'}
+        open={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+      >
+        {/* ... existing cart drawer content ... */}
+        <Box sx={{ p: 2 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            disabled={getTotalItems() === 0 || isSubmitting}
+            onClick={() => setIsCustomerModalOpen(true)}
+            startIcon={<ShoppingCart />}
+          >
+            {t('checkout.proceed')}
+          </Button>
+        </Box>
+      </Drawer>
+    );
+  };
 
   if (loading) {
     return (
@@ -1153,19 +1225,10 @@ const ExternalOrder: React.FC = () => {
       </Box>
 
       {/* Mobile Cart Drawer */}
-      <Drawer
-        anchor="right"
-        open={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        sx={{
-          '& .MuiDrawer-paper': {
-            width: { xs: '100%', sm: 400 },
-            px: 2,
-          },
-        }}
-      >
-        {/* ... existing drawer content ... */}
-      </Drawer>
+      {renderCartDrawer()}
+
+      {/* Customer Info Modal */}
+      {renderCustomerInfoModal()}
 
       {/* ... existing snackbars and dialogs ... */}
     </Box>

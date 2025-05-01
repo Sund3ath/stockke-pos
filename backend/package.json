@@ -24,7 +24,9 @@
   "license": "ISC",
   "dependencies": {
     "@apollo/server": "^4.10.2",
+    "@graphql-yoga/node": "^3.9.1",
     "@types/mongoose": "^5.11.96",
+    "@types/ws": "^8.18.1",
     "apollo-server-express": "^3.13.0",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
@@ -34,12 +36,15 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "graphql": "^16.8.1",
+    "graphql-subscriptions": "^3.0.0",
+    "graphql-ws": "^6.0.4",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.3",
     "mysql2": "^3.9.2",
     "reflect-metadata": "^0.2.1",
     "type-graphql": "^2.0.0-beta.6",
-    "typeorm": "^0.3.20"
+    "typeorm": "^0.3.20",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
